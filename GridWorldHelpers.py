@@ -80,22 +80,30 @@ def visualize_reward_grid(gw, ax):
 
 
 
-def get_environment(p_overflow):
+def get_environment(ce, p):
     """
-    Function which, with probability p_overflow, returns 1
-    and else returns 2, signalling environment 1 vs 2
+    Function which takes current environment and
+    
+    * with probability p, from ce to 1-ce
+    * with probability (1-p), keep environment constant
     
     Meant for toggling between overflow state and non-overflow state
 
     Parameters
     ----------
-    p_overflow : float in [0,1]
+    p : float in [0,1]
 
     Returns
     -------
     Mean reward grid
     """
-    return 1 if np.random.uniform() < p_overflow else 2
+    u = np.random.uniform()
+    if u < p: 
+        return 1-ce
+    else: 
+        return ce
+    
+    #return 1 if np.random.uniform() < p_overflow else 2
     
 
 def make_gw_colors(gw):
