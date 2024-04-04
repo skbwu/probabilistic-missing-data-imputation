@@ -229,12 +229,7 @@ def true_move(state, a, gw, gw_colors, p_wind_i, p_wind_j):
     # what's our proposed movement?
     i_new = int(np.clip(a=i-a[1], a_min=0, a_max=d-1))
     j_new = int(np.clip(a=j+a[0], a_min=0, a_max=d-1))
-    
-  
-    # get our new color - do this with sync_color instead
-    # c_new = int(gw_colors[i_new, j_new])
-    
-    
+        
     # compile the new state (not color yet)
     new_state = np.array([i_new, j_new, np.nan])
     
@@ -252,10 +247,9 @@ def sync_color(state, gw_colors):
     current state of the environment, as captured in gw_colors
 
     """
-    state[2] = gw_colors[int(state[0]),int(state[1])] #TODO: did I flip these?
+    state[2] = int(gw_colors[int(state[0]),int(state[1])]) #TODO: did I flip these?
     return(state)
-    
-    
+     
     
     
     
