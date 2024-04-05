@@ -59,12 +59,12 @@ def build_grids():
 
     # bridge grid world (no pond overflow)
     gw1 = np.full(shape=(d, d), fill_value=-1.0); gw1[:, 5:8] = -10.0
-    gw1[6,:] = -1.0; gw1[6,4:9] = +1.0
+    gw1[6,:] = -1.0; gw1[6,4:9] = -1 #the bridge
     gw1[0:3,:] = -1.0; gw1[6, -1] = +10.0
 
     # bridge grid world (yes pond overflow)
     gw2 = np.full(shape=(d, d), fill_value=-1.0); gw2[:, 4:9] = -10.0
-    gw2[6,:] = -1.0; gw2[6,4:9] = +1.0
+    gw2[6,:] = -1.0; gw2[6,4:9] = -1 #the bridge
     gw2[0:3,:] = -1.0; gw2[6, -1] = +10.0
 
     return(gw0, gw1, gw2)
