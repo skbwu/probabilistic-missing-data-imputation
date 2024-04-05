@@ -26,7 +26,7 @@ action_descs = {(0, 0) : "stay",
 
 
 
-def build_grids():
+def build_grids(d):
     """
     Build grid worlds with state vector (y,x,c) characterized by the presence
     of water (negative reward) and dry land (positive reward) as well
@@ -52,20 +52,28 @@ def build_grids():
     A tuple of mean reward grids
 
     """
-    d=10
+    assert d >= 6 #else things get messed up
     
     # baseline grid
     gw0 = np.full(shape=(d, d), fill_value=-1.0); gw0[0, -1] = +10.0
 
+    bridge_height = d-2
+
     # bridge grid world (no pond overflow)
-    gw1 = np.full(shape=(d, d), fill_value=-1.0); gw1[:, 5:8] = -10.0
-    gw1[6,:] = -1.0; gw1[6,4:9] = -1 #the bridge
-    gw1[0:3,:] = -1.0; gw1[6, -1] = +10.0
+    gw1 = np.full(shape=(d, d), fill_value=-1.0)
+    gw1[:, (d-3):(d-1)] = -10.0  #the water - width
+    gw1[bridge_height,(d-3):(d-1)] = -1 #the bridge
+    gw1[0:3,:] = -1.0;  #clear water on top
+    gw1[bridge_height, -1] = +10.0 #final spot
 
     # bridge grid world (yes pond overflow)
-    gw2 = np.full(shape=(d, d), fill_value=-1.0); gw2[:, 4:9] = -10.0
-    gw2[6,:] = -1.0; gw2[6,4:9] = -1 #the bridge
-    gw2[0:3,:] = -1.0; gw2[6, -1] = +10.0
+    gw2 = np.full(shape=(d, d), fill_value=-1.0)
+    gw2[:, (d-4):(d-1)] = -10.0 #the water - width - one wider
+    gw2[bridge_height,(d-4):(d-1)] = -1 #the bridge
+    gw2[0:2,:] = -1.  #clear water on top (make it one wider)
+    gw2[bridge_height, -1] = +10.0
+    
+    #TODO - this is not yet fully parameterized by d, it works for d=6 but maybe not higher
 
     return(gw0, gw1, gw2)
 
