@@ -61,15 +61,15 @@ def build_grids(d):
 
     # bridge grid world (no pond overflow)
     gw1 = np.full(shape=(d, d), fill_value=-1.0)
-    gw1[:, (d-3):(d-1)] = -10.0  #the water - width
-    gw1[bridge_height,(d-3):(d-1)] = -1 #the bridge
+    gw1[:, (d-5):(d-3)] = -10.0  #the water - width
+    gw1[bridge_height,(d-5):(d-3)] = -1 #the bridge
     gw1[0:3,:] = -1.0;  #clear water on top
     gw1[bridge_height, -1] = +10.0 #final spot
 
     # bridge grid world (yes pond overflow)
     gw2 = np.full(shape=(d, d), fill_value=-1.0)
-    gw2[:, (d-4):(d-1)] = -10.0 #the water - width - one wider
-    gw2[bridge_height,(d-4):(d-1)] = -1 #the bridge
+    gw2[:, (d-6):(d-2)] = -10.0 #the water - width - one wider
+    gw2[bridge_height,(d-6):(d-2)] = -1 #the bridge
     gw2[0:2,:] = -1.  #clear water on top (make it one wider)
     gw2[bridge_height, -1] = +10.0
     
