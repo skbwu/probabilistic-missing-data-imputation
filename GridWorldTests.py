@@ -3,6 +3,8 @@
 Script for tests of our functions
 """
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 import GridWorldHelpers as gwh
 
@@ -46,3 +48,32 @@ def test_miss_mech():
    
     
     print("All tests passed")
+    
+    
+    
+    
+def test_actions():
+    """
+    Try all possible actions and examine visusally if has done right thing
+
+    """
+    d = 5
+    for a in list(gwh.action_descs.keys()):
+            
+        # try a test-case
+        gw = np.zeros((d,d))
+        gw_colors = gwh.make_gw_colors(gw)
+    
+        # initialize our state randomly
+        state = np.array([2, 2, 1])
+        gw[state[0], state[1]] = +100
+        
+        # get our new state
+        new_state = gwh.true_move(state, a, gw, gw_colors, p_wind_i = 0, p_wind_j = 0)
+        gw[int(new_state[0]), int(new_state[1])] = 50
+        
+        sns.heatmap(gw, cbar=False, cmap="viridis")
+        plt.title(gwh.action_descs[a])
+        plt.show()
+    
+    
