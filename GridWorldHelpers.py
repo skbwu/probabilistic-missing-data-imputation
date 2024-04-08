@@ -26,7 +26,9 @@ action_descs = {(0, 0) : "stay",
 
 
 
-def build_grids(d):
+def build_grids(d, baseline_penalty = -1, 
+                water_penalty = -10,
+                end_reward = 10):
     """
     Build grid worlds with state vector (y,x,c) characterized by the presence
     of water (negative reward) and dry land (positive reward) as well
@@ -51,33 +53,34 @@ def build_grids(d):
     -------
     A tuple of mean reward grids
 
-    """
-    assert d >= 6 #else things get messed up
+
+    #TODO 
+    CAUTION:  this is not yet fully genearlized to any d. It works as expected for
+    d=8  but maybe not fpr other values
     
+    """
     # baseline grid
-    gw0 = np.full(shape=(d, d), fill_value=-1.0); gw0[0, -1] = +10.0
+    gw0 = np.full(shape=(d, d), fill_value=-1.0); gw0[0, -1] = end_reward
 
     bridge_height = d-2
 
     # bridge grid world (no pond overflow)
-    gw1 = np.full(shape=(d, d), fill_value=-1.0)
-    gw1[:, (d-5):(d-3)] = -10.0  #the water - width
-    gw1[bridge_height,(d-5):(d-3)] = -1 #the bridge
+    gw1 = np.full(shape=(d, d), fill_value= baseline_penalty)
+    gw1[:, (d-5):(d-3)] = water_penalty  #the water - width
+    gw1[bridge_height,(d-5):(d-3)] = baseline_penalty #the bridge
     gw1[0:3,:] = -1.0;  #clear water on top
-    gw1[bridge_height, -1] = +10.0 #final spot
+    gw1[bridge_height, -1] = +end_reward #final spot
 
     # bridge grid world (yes pond overflow)
-    gw2 = np.full(shape=(d, d), fill_value=-1.0)
-    gw2[:, (d-6):(d-2)] = -10.0 #the water - width - one wider
-    gw2[bridge_height,(d-6):(d-2)] = -1 #the bridge
+    gw2 = np.full(shape=(d, d), fill_value= baseline_penalty)
+    gw2[:, (d-6):(d-2)] = water_penalty #the water - width - one wider
+    gw2[bridge_height,(d-6):(d-2)] = baseline_penalty #the bridge
     gw2[0:2,:] = -1.  #clear water on top (make it one wider)
-    gw2[bridge_height, -1] = +10.0
+    gw2[bridge_height, -1] = +end_reward
     
-    #TODO - this is not yet fully parameterized by d, it works for d=6 but maybe not higher
-
     return(gw0, gw1, gw2)
 
-  
+
 
 def visualize_reward_grid(gw, ax):
     """
