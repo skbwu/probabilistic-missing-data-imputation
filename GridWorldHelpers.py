@@ -91,7 +91,7 @@ def visualize_reward_grid(gw, ax):
 
 
 
-def get_environment(ce, p):
+def get_environment(ce, p, indices):
     """
     Function which takes current environment and
     
@@ -102,15 +102,20 @@ def get_environment(ce, p):
 
     Parameters
     ----------
+    ce : current environment - an index in indices
+    
     p : float in [0,1]
-
+    
+    indices : np.array with possible indices - currently must be length 2
+    
     Returns
     -------
-    Mean reward grid
+    ce for no switch
+    other index in indices for switch
     """
     u = np.random.uniform()
     if u < p: 
-        return 1-ce
+        return indices[indices != ce][0]
     else: 
         return ce
     
@@ -240,6 +245,7 @@ def true_move(state, a, gw, gw_colors, p_wind_i, p_wind_j):
     # what's our proposed movement?
     i_new = int(np.clip(a=i-a[1], a_min=0, a_max=d-1))
     j_new = int(np.clip(a=j+a[0], a_min=0, a_max=d-1))
+    
         
     # compile the new state (not color yet)
     new_state = np.array([i_new, j_new, np.nan])
@@ -247,19 +253,24 @@ def true_move(state, a, gw, gw_colors, p_wind_i, p_wind_j):
     # possibly add wind here
     new_state = wind(new_state, d, p_wind_i, p_wind_j)
     
+    # get color of final new state
+    new_state[2] = int(gw_colors[int(new_state[0]),
+                                 int(new_state[1])]) #TODO: did I flip these?
+   
+    
     return new_state
 
 
 
 
-def sync_color(state, gw_colors):
-    """
-    Makes sure the color of state (y,x,c) aligns with the
-    current state of the environment, as captured in gw_colors
+# def sync_color(state, gw_colors):
+#     """
+#     Makes sure the color of state (y,x,c) aligns with the
+#     current state of the environment, as captured in gw_colors
 
-    """
-    state[2] = int(gw_colors[int(state[0]),int(state[1])]) #TODO: did I flip these?
-    return(state)
+#     """
+#     state[2] = int(gw_colors[int(state[0]),int(state[1])]) #TODO: did I flip these?
+#     return(state)
      
     
     
