@@ -17,10 +17,26 @@ action_descs = {(0, 0) : "stay",
                 (-1, 0) : "left", 
                 (-1, 1): "diag-left-up"}
 
+# what are the actual list of actions that are possible?
+actions = list(action_descs.keys())
 
 # just to make sure we can get it quickly
 def load_actions():
     return action_descs.copy()
+
+# function for initializing our Q matrix, assuming 3 colors
+def init_Q(d, init_value=0.0):
+    
+    # start our Q
+    Q = {((i, j, c), action) : init_value for i in range(d) for j in range(d) 
+         for c in range(3) for action in list(action_descs.keys())}
+    
+    # encode our missing-state option, too
+    for action in list(action_descs.keys()):
+        Q[("missing", action)] = init_value
+        
+    # return our Q matrix
+    return Q
 
 
 
@@ -278,7 +294,21 @@ def true_move(state, a, gw, gw_colors, p_wind_i, p_wind_j):
 #     return(state)
      
     
-    
+######################################
+# Taking actions based on Q.
+######################################
+
+# function to select actions based on epsilon greedy policy
+def select_action(state, Q, epsilon):
+
+    # what is the "greedy" action index?
+    greedy_idx = np.argmax([Q[(state, a)] for a in actions])
+
+    # let's actually pick our action index based on epsilon greedy
+    action_idx = greedy_idx if np.random.uniform() > epsilon else np.random.choice(len(actions))
+
+    # return our action
+    return actions[action_idx]
     
     
 ######################################
