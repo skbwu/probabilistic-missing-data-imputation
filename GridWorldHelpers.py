@@ -18,6 +18,11 @@ action_descs = {(0, 0) : "stay",
                 (-1, 1): "diag-left-up"}
 
 
+# just to make sure we can get it quickly
+def load_actions():
+    return action_descs.copy()
+
+
 
 
 ####################
