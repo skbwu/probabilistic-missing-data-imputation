@@ -17,9 +17,9 @@ def init_Tstandard(d, colors = [0,1,2], init_value = 0):
     
     Returns
     -------
-    Tstandard: a dict where keys are (S_t,A_t) aka tuples of the form ((x,y,c),(a1,a2))
+    Tstandard: a dict where keys are (S_t,A_t) aka tuples of the form ((y,x,c),(a1,a2))
     and values are dictionaries with keys formed by (S_{t+1}) aka tuples of the form
-    (x,y,c)
+    (y,x,c)
     
     Example:
         
@@ -43,16 +43,16 @@ def init_Tstandard(d, colors = [0,1,2], init_value = 0):
     # get possible actions
     action_descs = gwh.load_actions()
     
-    S_dict = {((i,j,c)) : init_value for i in range(d) for j in range(d) for c in colors}
+    inner_S_dict = {((i,j,c)) : init_value for i in range(d) for j in range(d) for c in colors}
 
 
-    T = {((i, j, c), action) : S_dict for i in range(d) for j in range(d) 
+    T = {((i, j, c), action) : inner_S_dict for i in range(d) for j in range(d) 
                 for c in colors for action in list(action_descs.keys())}
 
     return(T)    
     
     
-def init_Tmice(d, colors = [0,1,2], init_val = 0 ):
+def init_Tmice(d, colors = [0,1,2], init_value = 0 ):
     """
 
     Parameters
@@ -61,24 +61,38 @@ def init_Tmice(d, colors = [0,1,2], init_val = 0 ):
     
     colors : list of color codes
     
-    init_val: count to initialize with
+    init_value: count to initialize with
     
     Returns
     -------
+    dict with entries (y,x,c) where for "x" value is:
+           
+        dict where keys are tuples of the form ((y,x,c),(a1,a2),(y,c))
+        and values are dictionaries with keys 0,...,d-1 for each of the possible
+        values of x
+        
+    for "y" value, it is same only keys are tuples of form ((y,x,c),(a1,a2),(x,c))
     
-    
-    dict where keys are (S_t,A_t) aka tuples of the form ((x,y,c),(a1,a2))
-    and values are dictionaries with keys formed by (S_{t+1}) aka tuples of the form
-    (x,y,c)
+    for "c" value, it is same only keys are tuples of form ((y,x,c),(a1,a2),(y,x))
 
 
     """
+    action_descs = gwh.load_actions()
+  
+    inner_xy_dict = {i: init_value for i in range(d)}
+    inner_c_dict = {c: init_value for c in colors}
+
+    x_dict = {((i, j, c), action, (u,v)) : inner_xy_dict for i in range(d) for j in range(d) 
+                for c in colors for action in list(action_descs.keys()) for u in range(d) for v in colors}
+
+    y_dict = x_dict.copy() #same structure 
     
+    c_dict = {((i, j, c), action, (u,v)) : inner_c_dict for i in range(d) for j in range(d) 
+                for c in colors for action in list(action_descs.keys()) for u in range(d) for v in range(d)}
+
+
+    return {"x":x_dict,"y":y_dict, "c":c_dict}
     
-    
-    out_dict = {"x":{},
-                "y":{},
-                "z":{}}
     
     
     
