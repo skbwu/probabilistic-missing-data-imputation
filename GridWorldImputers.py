@@ -1,4 +1,4 @@
-
+import numpy as np
 import GridWorldHelpers as gwh
 
 
@@ -76,6 +76,9 @@ def init_Tmice(d, colors = [0,1,2], init_value = 0 ):
     for "c" value, it is same only keys are tuples of form ((y,x,c),(a1,a2),(y,x))
 
 
+    Note: the raeson (y,x) are not the typical (x,y) is because of how Numpy does
+    (row,column) indexing 
+
     """
     action_descs = gwh.load_actions()
   
@@ -90,10 +93,50 @@ def init_Tmice(d, colors = [0,1,2], init_value = 0 ):
     c_dict = {((i, j, c), action, (u,v)) : inner_c_dict for i in range(d) for j in range(d) 
                 for c in colors for action in list(action_descs.keys()) for u in range(d) for v in range(d)}
 
+    return {"i":y_dict,
+            "j":x_dict, 
+            "c":c_dict}
 
-    return {"x":x_dict,"y":y_dict, "c":c_dict}
+
+def draw_Tstandard(Tstandard, A, S):
+    pass 
+    #TODO
+    
+
+def draw_Tmice(Tmice, A, S, Scomplete, focal):
+    pass 
+    #TODO
     
     
+    
+    
+def single_mouse(A,S, Ostate, Tstandard, Tmice, num_cycles = 10):
+    """
+    Function for doing mice for a single K
+
+    #TODO: test stability
+    """
+    miss_vec = np.isnan(Ostate)
+    num_miss = np.sum(miss_vec)
+    where_miss = np.where(miss_vec)
+    
+    # if fully observed, return state 
+    if num_miss == 0:
+        return Ostate
+
+    # initialize draws of missing using T standard
+    Istate = draw_Tstandard(Tstandard, A, S)  #TODO - write this function
+
+    # if not at all observed, return this
+    if num_miss == len(Ostate):
+        return Istate
+
+    # if partially observed    
+    for k in range(num_cycles):
+        for elem in where_miss:
+            Istate = draw_Tmice(Tmice, A, S, Scomplete = Istate, focal = elem)
+
+    return Istate
     
     
     
