@@ -1,7 +1,13 @@
 import numpy as np
+import copy
+from collections import Counter
+
 import GridWorldHelpers as gwh
 
 
+############################
+# Principled Approach
+############################
 
 
 def init_Tstandard(d, colors = [0,1,2], init_value = 0): 
@@ -51,7 +57,69 @@ def init_Tstandard(d, colors = [0,1,2], init_value = 0):
 
     return(T)    
     
+
+def sample_entry(dic):
+    """
+    Given dictionary dic with non-negative integers or floats
+    values, draw a key at random with probabilities proportional to 
+    normalized values
+    """
+    options = list(dic.keys()) #using fact this keeps order
+    counts = np.array(list(dic.values()))  
+    probs = counts/sum(counts)
+    j = np.random.choice(range(len(options)),1,1,probs)[0]
+    return(options[j])
+
+def draw_Tstandard(Tstandard,S,A, Ostate):
+    """
+    Given transition matrix and current state and action, draw at random a
+    new state
+
+    Parameters
+    ----------
+    Tstandard : dictionary as output by init_Tstandard()
+
+    S : tuple describing state
+    A : tuple describing action
+    Ostate : observed state
+
+    Returns
+    -------
+    S' : tuple describing the next state
     
+    """
+    assert type(S) == tuple, "S is not tuple"
+    assert type(A) == tuple, "A is not tuple"  
+    assert type(Ostate) == tuple, "Ostate is not a tuple"
+    
+    #O state missingness information
+    miss_vec = np.isnan(Ostate)
+    num_miss = np.sum(miss_vec)
+    where_no_miss = np.where(~miss_vec)[0]
+   
+    # if fully observed, return state 
+    if num_miss == 0:
+        return Ostate
+
+    rel_dict = Tstandard[(S,A)]
+    
+    #filter based on observed states
+    if num_miss  > 0:
+        #Get relevant dictionary based on last state and action
+        keys = [elem  for elem in rel_dict.keys() if all([elem[i] == Ostate[i] for i in where_no_miss]) ]
+        rel_dict = {k:v for (k,v) in rel_dict.items() if k in keys}
+       
+    Istate = sample_entry(rel_dict)
+    #assert [Ostate[i] == Istate[i] for i in where_no_miss], "failed to maintain observed state"
+
+    return(Istate)
+    
+
+
+########################################################################33
+# MICE approach that doesn't use joint info but is lower dimensional
+########################################################################33
+
 def init_Tmice(d, colors = [0,1,2], init_value = 0 ):
     """
 
@@ -105,50 +173,12 @@ def init_Tmice(d, colors = [0,1,2], init_value = 0 ):
             2:c_dict}
 
 
-def sample_entry(dic):
-    """
-    Given dictionary dic with non-negative integers or floats
-    values, draw a key at random with probabilities proportional to 
-    normalized values
-    """
-    options = list(dic.keys()) #using fact this keeps order
-    counts = np.array(list(dic.values()))  
-    probs = counts/sum(counts)
-    j = np.random.choice(range(len(options)),1,1,probs)[0]
-    return(options[j])
-   
-    
-def draw_Tstandard(Tstandard,S,A):
-    """
-    Given transition matrix and current state and action, draw at random a
-    new state
-
-    Parameters
-    ----------
-    Tstandard : dictionary as output by init_Tstandard()
-
-    S : tuple describing state
-    A : tuple describing action
-
-    Returns
-    -------
-    S' : tuple describing the next state
-    
-    """
-    assert type(S) == tuple, "S is not tuple"
-    assert type(A) == tuple, "A is not tuple"  
-    relevant_entry = Tstandard[(S,A)]
-    return sample_entry(relevant_entry)
-
-    
-
-
-def draw_Tmice(Tmice, S, A, Scomplete, focal):
+def draw_Tmice(Tmice, S, A, focal, Scomplete = None):
     """
     Given transition matrix, current state and action, 
     a complete next state vector Scomplete and a focal state
     (the one that was originally missing that we will now
-     re-draw), draw S[focal] | S, A, S[focal] using the 
+      re-draw), draw S[focal] | S, A, S[focal] using the 
     probabilities implied by the counts in the Tmice[focal] matrix
     
 
@@ -163,66 +193,81 @@ def draw_Tmice(Tmice, S, A, Scomplete, focal):
   
     Returns
     -------
-    Scomplete with Scomplete[focal] updated to a possibly new
-    value drawn according to Tmice
+    if Scomplete is not None:
+        Scomplete with Scomplete[focal] updated to a possibly new
+        value drawn according to Tmice
+    
+    if Scomplete is None:
+        
+        a new draw of focal |S,A  (just the single element)
     
     """
     assert type(S) == tuple, "S is not tuple"
     assert type(A) == tuple, "A is not tuple"
-    assert type(Scomplete) == tuple, "Scomplete is not a tuple"
+    assert type(Scomplete) == tuple or Scomplete is None, "Scomplete is not a tuple"
     assert focal in [0,1,2], "focal out of range"
     
+    #if given, you draw from focal given other entries in Scomplete    
+    if Scomplete is not None:
+        #note: OK for Scomplete to be a tuple but returns an array
+        Snf = tuple(np.delete(Scomplete, focal)) #S non-focal
+        rel_dict = Tmice[focal][(S,A, Snf)]
+        new_entry = sample_entry(rel_dict)
+        
+        #replace old value with the new sampled entry
+        Scomplete = np.array(Scomplete) #in case it is tuple
+        Scomplete[focal] = new_entry
+        return(tuple(Scomplete))
     
-    #note: OK for Scomplete to be a tuple but returns an array
-    Snf = tuple(np.delete(Scomplete, focal)) #S non-focal
-    relevant_entry = Tmice[focal][(S,A, Snf)]
-    new_entry = sample_entry(relevant_entry)
+    #otherwise, draw from marginal x|S,A type distribution
+    else:
+        keys = [elem for elem in Tmice[focal].keys() if (S in elem and A in elem)]
+        dicts = [v for (k,v) in Tmice[focal].items() if k in keys]
+        counter = Counter()
+        for d in dicts: 
+            counter.update(d)
+        rel_dict = dict(counter)
+        new_entry = sample_entry(rel_dict)
+
+        return(new_entry)
+
     
-    #replace old value with the new sampled entry
-    Scomplete = np.array(Scomplete) #in case it is tuple
-    Scomplete[focal] = new_entry
-    return(tuple(Scomplete))
-    
-    
-    
-def single_mouse(A,S, Ostate, Tstandard, Tmice, num_cycles = 10):
+def single_mouse(A,S, Ostate, Tmice, num_cycles = 10):
     """
     Function for doing mice for a single K
-
-    #TODO: test stability
     """
     miss_vec = np.isnan(Ostate)
     num_miss = np.sum(miss_vec)
     where_miss = np.where(miss_vec)[0]
     where_no_miss = np.where(~miss_vec)[0]
+   
     
     # if fully observed, return state 
     if num_miss == 0:
         return Ostate
+    
+    # draw initially over marginal x | S,A type dist
+    Istate = [0,0,0]
+    for k in where_miss:
+        Istate[k] = int(draw_Tmice(Tmice, S, A, focal = k))
+    for k in where_no_miss:
+        Istate[k] = Ostate[k]
 
-
-    # if not at all observed, return this
-    if num_miss == len(Ostate):
-        Istate = draw_Tstandard(Tstandard, S, A)  
-        return Istate
-
-    # initialize draws of missing using T standard
-    #TODO: fix to keep Ostate same
-    Istate = draw_Tstandard(Tstandard, S, A)  
-
-    # if partially observed    
-    for k in range(num_cycles):
-        for elem in where_miss:
-            Istate = draw_Tmice(Tmice, S, A, 
-                                Scomplete = Istate,
-                                focal = elem)
-            if len(where_miss) == 1:
-                break #only need to draw once then
-
-    #check observed parts were maintained 
+    # cycle through draws of conditionals
+    Istate = tuple(Istate)    
+    for n in range(num_cycles):
+         for k in where_miss:
+             Istate = draw_Tmice(Tmice, S, A, 
+                                 Scomplete = Istate,
+                                 focal = k)
+             if len(where_miss) == 1:
+                 break #only need to draw once then
+     
     assert [Ostate[i] == Istate[i] for i in where_no_miss], "failed to maintain observed state"
+    return(Istate)
 
-    return Istate
+
+    
     
     
     
