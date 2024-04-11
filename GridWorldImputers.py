@@ -52,7 +52,7 @@ def init_Tstandard(d, colors = [0,1,2], init_value = 0):
     inner_S_dict = {((i,j,c)) : init_value for i in range(d) for j in range(d) for c in colors}
 
 
-    T = {((i, j, c), action) : inner_S_dict for i in range(d) for j in range(d) 
+    T = {((i, j, c), action) : copy.deepcopy(inner_S_dict) for i in range(d) for j in range(d) 
                 for c in colors for action in list(action_descs.keys())}
 
     return(T)    
@@ -156,16 +156,13 @@ def init_Tmice(d, colors = [0,1,2], init_value = 0 ):
 
     """
     action_descs = gwh.load_actions()
-  
-    inner_xy_dict = {i: init_value for i in range(d)}
-    inner_c_dict = {c: init_value for c in colors}
-
-    x_dict = {((i, j, c), action, (u,v)) : inner_xy_dict for i in range(d) for j in range(d) 
+   
+    x_dict = {((i, j, c), action, (u,v)) :  {i: init_value for i in range(d)} for i in range(d) for j in range(d) 
                 for c in colors for action in list(action_descs.keys()) for u in range(d) for v in colors}
 
     y_dict = x_dict.copy() #same structure 
     
-    c_dict = {((i, j, c), action, (u,v)) : inner_c_dict for i in range(d) for j in range(d) 
+    c_dict = {((i, j, c), action, (u,v)) :  {c: init_value for c in colors} for i in range(d) for j in range(d) 
                 for c in colors for action in list(action_descs.keys()) for u in range(d) for v in range(d)}
 
     return {0:y_dict,
@@ -257,9 +254,7 @@ def single_mouse(A,S, Ostate, Tmice, num_cycles = 10):
     Istate = tuple(Istate)    
     for n in range(num_cycles):
          for k in where_miss:
-             Istate = draw_Tmice(Tmice, S, A, 
-                                 Scomplete = Istate,
-                                 focal = k)
+             Istate = draw_Tmice(Tmice, S, A, Scomplete = Istate, focal = k)
              if len(where_miss) == 1:
                  break #only need to draw once then
      
