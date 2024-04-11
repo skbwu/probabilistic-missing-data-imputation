@@ -1,4 +1,4 @@
-
+import numpy as np
 import GridWorldHelpers as gwh
 
 
@@ -65,16 +65,26 @@ def init_Tmice(d, colors = [0,1,2], init_value = 0 ):
     
     Returns
     -------
-    dict with entries (y,x,c) where for "x" value is:
+    dict with keys 0,1,2 where
+    
+    
+    0 stands for y coordinate and value is:
            
         dict where keys are tuples of the form ((y,x,c),(a1,a2),(y,c))
         and values are dictionaries with keys 0,...,d-1 for each of the possible
         values of x
         
-    for "y" value, it is same only keys are tuples of form ((y,x,c),(a1,a2),(x,c))
+    1 stands for "y" value.
+        
+        it is same as above only keys are tuples of form ((y,x,c),(a1,a2),(x,c))
     
-    for "c" value, it is same only keys are tuples of form ((y,x,c),(a1,a2),(y,x))
+    2 stands for "c" value
+        
+        it is same as above only keys are tuples of form ((y,x,c),(a1,a2),(y,x))
 
+
+    Note: the raeson (y,x) are not the typical (x,y) order is because of how Numpy does
+    (row,column) indexing 
 
     """
     action_descs = gwh.load_actions()
@@ -90,10 +100,117 @@ def init_Tmice(d, colors = [0,1,2], init_value = 0 ):
     c_dict = {((i, j, c), action, (u,v)) : inner_c_dict for i in range(d) for j in range(d) 
                 for c in colors for action in list(action_descs.keys()) for u in range(d) for v in range(d)}
 
+    return {0:y_dict,
+            1:x_dict, 
+            2:c_dict}
 
-    return {"x":x_dict,"y":y_dict, "c":c_dict}
+
+def sample_entry(dic):
+    """
+    Given dictionary dic with non-negative integers or floats
+    values, draw a key at random with probabilities proportional to 
+    normalized values
+    """
+    options = list(dic.keys()) #using fact this keeps order
+    counts = np.array(list(dic.values()))  
+    probs = counts/sum(counts)
+    j = np.random.choice(range(len(options)),1,1,probs)[0]
+    return(options[j])
+   
+    
+def draw_Tstandard(Tstandard,S,A):
+    """
+    Given transition matrix and current state and action, draw at random a
+    new state
+
+    Parameters
+    ----------
+    Tstandard : dictionary as output by init_Tstandard()
+
+    S : tuple describing state
+    A : tuple describing action
+
+    Returns
+    -------
+    S' : tuple describing the next state
+    
+    """
+    assert type(S) == tuple, "S is not tuple"
+    assert type(A) == tuple, "A is not tuple"  
+    relevant_entry = Tstandard[(S,A)]
+    return sample_entry(relevant_entry)
+
+    
+
+
+def draw_Tmice(Tmice, S, A, Scomplete, focal):
+    """
+    Given transition matrix, current state and action, 
+    a complete next state vector Scomplete and a focal state
+    (the one that was originally missing that we will now
+     re-draw), draw S[focal] | S, A, S[focal] using the 
+    probabilities implied by the counts in the Tmice[focal] matrix
+    
+
+    Parameters
+    ----------
+    Tmice : dictionary as output by init_Tmice()
+
+    S : tuple describing state
+    A : tuple describing action
+    Scomplete: a tuple or numpy array describing state
+    focal : an integer in [0,1,2] 
+  
+    Returns
+    -------
+    Scomplete with Scomplete[focal] updated to a possibly new
+    value drawn according to Tmice
+    
+    """
+    assert type(S) == tuple, "S is not tuple"
+    assert type(A) == tuple, "A is not tuple"
+    assert focal in [0,1,2], "focal out of range"
+    
+
+    #note: OK for Scomplete to be a tuple but returns an array
+    Snf = tuple(np.delete(Scomplete, focal)) #S non-focal
+    relevant_entry = Tmice[focal][(S,A, Snf)]
+    new_entry = sample_entry(relevant_entry)
+    
+    #replace old value with the new sampled entry
+    Scomplete = np.array(Scomplete) #in case it is tuple
+    Scomplete[focal] = new_entry
+    return(tuple(Scomplete))
     
     
+    
+def single_mouse(A,S, Ostate, Tstandard, Tmice, num_cycles = 10):
+    """
+    Function for doing mice for a single K
+
+    #TODO: test stability
+    """
+    miss_vec = np.isnan(Ostate)
+    num_miss = np.sum(miss_vec)
+    where_miss = np.where(miss_vec)
+    
+    # if fully observed, return state 
+    if num_miss == 0:
+        return Ostate
+
+    # initialize draws of missing using T standard
+    Istate = draw_Tstandard(Tstandard, S, A)  
+
+    # if not at all observed, return this
+    if num_miss == len(Ostate):
+        return Istate
+
+    # if partially observed    
+    for k in range(num_cycles):
+        for elem in where_miss:
+            Istate = draw_Tmice(Tmice, S, A, Scomplete = Istate, focal = elem)
+
+    return Istate
     
     
     
