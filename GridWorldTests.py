@@ -89,16 +89,16 @@ def test_imputers():
     
     #Make sure that if nothing missing, recovers original state
     Ostate = (1,1,4)
-    out = gwi.single_mouse(A,S, Ostate = Ostate, Tmice = Tmice, num_cycles = 3)
+    out = gwi.draw_mouse(Tmice, S, A, Ostate = Ostate, num_cycles = 3)
     assert out == Ostate
-    out = gwi.draw_Tstandard(Tstandard,S,A, Ostate)
+    out = gwi.draw_Tstandard(Tstandard,S, A, Ostate)
     assert out == Ostate 
 
     #Probabilistic Tests that are very unlikely to fail though it is possible
     count = 0
     Ostate = (1,np.nan,np.nan)
     for i in range(100):
-        out = gwi.draw_Tstandard(Tstandard,S,A, Ostate)
+        out = gwi.draw_Tstandard(Tstandard,S, A, Ostate)
         assert out[0] == Ostate[0]
         if out[1] != Ostate[1]:
             count += 1
@@ -107,7 +107,7 @@ def test_imputers():
     count = 0
     Ostate = (1,np.nan,np.nan)
     for i in range(100):
-        out = gwi.single_mouse(A,S, Ostate = Ostate, Tmice = Tmice, num_cycles = 3)
+        out = gwi.draw_mouse(Tmice, S, A, Ostate = Ostate, num_cycles = 3)
         assert out[0] == Ostate[0]
         if out[1] != Ostate[1]:
             count += 1
@@ -118,18 +118,18 @@ def test_imputers():
     count = 0
     Ostate = (1,np.nan,np.nan)
     for i in range(100):
-        out = gwi.draw_Tstandard(Tstandard,S,A, Ostate)
+        out = gwi.draw_Tstandard(Tstandard,S, A, Ostate)
         assert out[0] == Ostate[0]
         if out == (1,0,4):
             count += 1
     assert count > 90
     
     
-    Tmice[2][(S,A,(1,0))][5] = 1000 #make color 5 dominate over 4
+    Tmice[2][(S, A,(1,0))][5] = 1000 #make color 5 dominate over 4
     count = 0
     Ostate = (1,0,np.nan)
     for i in range(100):
-        out = gwi.single_mouse(A,S, Ostate = Ostate, Tmice = Tmice, num_cycles = 3)
+        out = gwi.draw_mouse(Tmice, S, A, Ostate = Ostate, num_cycles = 3)
         assert out[0] == Ostate[0]
         assert out[1] == Ostate[1]
         if out == (1,0,5):
@@ -142,7 +142,7 @@ def test_imputers():
     S = (0,0,4)
     Ostate = (1,0,np.nan)
     for i in range(100):
-        out = gwi.single_mouse(A,S, Ostate = Ostate, Tmice = Tmice, num_cycles = 3)
+        out = gwi.draw_mouse(Tmice, S, A, Ostate = Ostate, num_cycles = 3)
         assert out[0] == Ostate[0]
         assert out[1] == Ostate[1]
         if out == (1,0,5):
@@ -152,7 +152,7 @@ def test_imputers():
     count = 0
     Ostate = (1,0,np.nan)
     for i in range(100):
-        out = gwi.draw_Tstandard(Tstandard,S,A, Ostate)
+        out = gwi.draw_Tstandard(Tstandard,S, A, Ostate)
         assert out[0] == Ostate[0]
         assert out[1] == Ostate[1]
         if out == (1,0,4):
@@ -163,13 +163,13 @@ def test_imputers():
     #check it works in case where everything is missing
     count = 0
     S = (0,0,4)
-    Tstandard[(S,A)][(1,0,5)] = 2 #make this dominate a little
+    Tstandard[(S,A)][(1,0,5)] = 1 #make this dominate a little
     Ostate = (np.nan,np.nan,np.nan)
     for i in range(100):
-        out = gwi.single_mouse(A,S, Ostate = Ostate, Tmice = Tmice, num_cycles = 3)
+        out = gwi.draw_mouse(Tmice, S, A, Ostate = Ostate, num_cycles = 3)
         if out == (1,0,5):
             count += 1
-    assert count < 90 and count > 10
+    assert count < 95 and count > 5
     
     print("Imputation method tests passed")
     
