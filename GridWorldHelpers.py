@@ -18,7 +18,7 @@ action_descs = {(0, 0) : "stay",
                 (-1, 1): "diag-left-up"}
 
 # what are the actual list of actions that are possible?
-actions = list(action_descs.keys())
+ACTIONS = list(action_descs.keys())
 
 # just to make sure we can get it quickly
 def load_actions():
@@ -292,39 +292,49 @@ def true_move(state, a, gw, gw_colors, p_wind_i, p_wind_j):
     return new_state
 
 
-
-
-# def sync_color(state, gw_colors):
-#     """
-#     Makes sure the color of state (y,x,c) aligns with the
-#     current state of the environment, as captured in gw_colors
-
-#     """
-#     state[2] = int(gw_colors[int(state[0]),int(state[1])]) #TODO: did I flip these?
-#     return(state)
-     
     
 ######################################
 # Taking actions based on Q.
 ######################################
 
-# function to select actions based on epsilon greedy policy
 def select_action(state, Q, epsilon):
+    """
+    Function select actions based on an epsilon greedy policy 
+    (or greedy if psilon = 0), maxixmizing over the Q function formatted
+    as output by init_Q
+
+    Parameters
+    ----------
+    state : tuple encoding state to select action for
+
+    Q : Q matrix
+
+    epsilon : int or float >= 0
+
+    Returns
+    -------
+    an action encoded as a length 2 tuple
+    """
+    assert epsilon >= 0
 
     # what is the "greedy" action index?
-    greedy_idx = np.argmax([Q[(state, a)] for a in actions])
+    greedy_idx = np.argmax([Q[(state, a)] for a in ACTIONS])
 
     # let's actually pick our action index based on epsilon greedy
-    action_idx = greedy_idx if np.random.uniform() > epsilon else np.random.choice(len(actions))
+    action_idx = greedy_idx if np.random.uniform() > epsilon else np.random.choice(len(ACTIONS))
 
     # return our action
-    return actions[action_idx]
+    return ACTIONS[action_idx]
 
 
 # function for updating Q
 def update_Q(Q, state, action, reward, new_state, alpha, gamma):
+    """
+    Given Q function, state, action, reward and next state, do a 
+    standard Q update
+    """
     
-    # what's our list of actions again?
+    # what's our list of ACTIONS again?
     actions = [(0, 0), (0, 1), (1, 1), 
                (1, 0), (1, -1), (0, -1), 
                (-1, -1), (-1, 0), (-1, 1)]
