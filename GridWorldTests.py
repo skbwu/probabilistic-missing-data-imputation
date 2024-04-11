@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 import GridWorldHelpers as gwh
+import GridWorldImputers as gwi
 
 
 def test_miss_mech():
@@ -76,4 +77,96 @@ def test_actions():
         plt.title(gwh.action_descs[a])
         plt.show()
     
+
+
+def test_imputers():
+    
+    Tstandard = gwi.init_Tstandard(2,[4,5], 0.5)
+    Tmice = gwi.init_Tmice(2,[4,5],0.5)
+
+    S = (1,1,4)
+    A = (0,1)
+    
+    #Make sure that if nothing missing, recovers original state
+    Ostate = (1,1,4)
+    out = gwi.single_mouse(A,S, Ostate = Ostate, Tmice = Tmice, num_cycles = 3)
+    assert out == Ostate
+    out = gwi.draw_Tstandard(Tstandard,S,A, Ostate)
+    assert out == Ostate 
+
+    #Probabilistic Tests that are very unlikely to fail though it is possible
+    count = 0
+    Ostate = (1,np.nan,np.nan)
+    for i in range(100):
+        out = gwi.draw_Tstandard(Tstandard,S,A, Ostate)
+        assert out[0] == Ostate[0]
+        if out[1] != Ostate[1]:
+            count += 1
+    assert count > 1
+    
+    count = 0
+    Ostate = (1,np.nan,np.nan)
+    for i in range(100):
+        out = gwi.single_mouse(A,S, Ostate = Ostate, Tmice = Tmice, num_cycles = 3)
+        assert out[0] == Ostate[0]
+        if out[1] != Ostate[1]:
+            count += 1
+    assert count > 1
+    
+    
+    Tstandard[(S,A)][(1,0,4)] = 1000 #make this dominate
+    count = 0
+    Ostate = (1,np.nan,np.nan)
+    for i in range(100):
+        out = gwi.draw_Tstandard(Tstandard,S,A, Ostate)
+        assert out[0] == Ostate[0]
+        if out == (1,0,4):
+            count += 1
+    assert count > 90
+    
+    
+    Tmice[2][(S,A,(1,0))][5] = 1000 #make color 5 dominate over 4
+    count = 0
+    Ostate = (1,0,np.nan)
+    for i in range(100):
+        out = gwi.single_mouse(A,S, Ostate = Ostate, Tmice = Tmice, num_cycles = 3)
+        assert out[0] == Ostate[0]
+        assert out[1] == Ostate[1]
+        if out == (1,0,5):
+            count += 1
+    assert count > 90
+
+
+    #check that elsehwere it's still 50-50 (5 does not dominate over 4)
+    count = 0
+    S = (0,0,4)
+    Ostate = (1,0,np.nan)
+    for i in range(100):
+        out = gwi.single_mouse(A,S, Ostate = Ostate, Tmice = Tmice, num_cycles = 3)
+        assert out[0] == Ostate[0]
+        assert out[1] == Ostate[1]
+        if out == (1,0,5):
+            count += 1
+    assert count < 90, "still 50-50"
+    
+    count = 0
+    Ostate = (1,0,np.nan)
+    for i in range(100):
+        out = gwi.draw_Tstandard(Tstandard,S,A, Ostate)
+        assert out[0] == Ostate[0]
+        if out == (1,0,4):
+            count += 1
+    assert count < 90
+
+    
+    
+    print("Imputation method tests passed")
+    
+    
+    
+    
+if __name__ == "__main__":
+    test_miss_mech()
+    test_actions()
+    test_imputers()
     
