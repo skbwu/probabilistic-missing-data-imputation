@@ -257,8 +257,10 @@ def single_mouse(A,S, Ostate, Tmice, num_cycles = 10):
              Istate = draw_Tmice(Tmice, S, A, Scomplete = Istate, focal = k)
              if len(where_miss) == 1:
                  break #only need to draw once then
-     
-    assert [Ostate[i] == Istate[i] for i in where_no_miss], "failed to maintain observed state"
+    
+    check = [Ostate[i] == Istate[i] for i in where_no_miss]
+    if len(check) > 0:
+        assert all(check), "failed to maintain observed state"
     return(Istate)
 
 

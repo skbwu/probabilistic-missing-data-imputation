@@ -154,14 +154,24 @@ def test_imputers():
     for i in range(100):
         out = gwi.draw_Tstandard(Tstandard,S,A, Ostate)
         assert out[0] == Ostate[0]
+        assert out[1] == Ostate[1]
         if out == (1,0,4):
             count += 1
     assert count < 90
-
     
+    
+    #check it works in case where everything is missing
+    count = 0
+    S = (0,0,4)
+    Tstandard[(S,A)][(1,0,5)] = 2 #make this dominate a little
+    Ostate = (np.nan,np.nan,np.nan)
+    for i in range(100):
+        out = gwi.single_mouse(A,S, Ostate = Ostate, Tmice = Tmice, num_cycles = 3)
+        if out == (1,0,5):
+            count += 1
+    assert count < 90 and count > 10
     
     print("Imputation method tests passed")
-    
     
     
     
