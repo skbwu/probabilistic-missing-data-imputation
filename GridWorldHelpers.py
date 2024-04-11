@@ -220,6 +220,9 @@ def wind(state, d, p_wind_i, p_wind_j):
 
     """
     
+    # make sure state is an np.array
+    state = np.array(state)
+    
     # make a copy of our state
     wind_state = state.copy()
     
@@ -258,6 +261,11 @@ def true_move(state, a, gw, gw_colors, p_wind_i, p_wind_j):
     from action
 
     """
+    
+    # if we're at the terminal state, directly teleport to the origin regardless of action or wind
+    if (state[0] == 6) and (state[1] == 7):
+        return (7, 0, 0.0)
+       
     d  = gw.shape[0]
     
     # extract the state quantities
@@ -278,6 +286,8 @@ def true_move(state, a, gw, gw_colors, p_wind_i, p_wind_j):
     new_state[2] = int(gw_colors[int(new_state[0]),
                                  int(new_state[1])]) #TODO: did I flip these?
    
+    # convert to a tuple
+    new_state = tuple(new_state)
     
     return new_state
 
@@ -309,6 +319,27 @@ def select_action(state, Q, epsilon):
 
     # return our action
     return actions[action_idx]
+
+
+# function for updating Q
+def update_Q(Q, state, action, reward, new_state, alpha, gamma):
+    
+    # what's our list of actions again?
+    actions = [(0, 0), (0, 1), (1, 1), 
+               (1, 0), (1, -1), (0, -1), 
+               (-1, -1), (-1, 0), (-1, 1)]
+    
+    # make a copy of Q
+    Qnew = copy.deepcopy(Q)
+    
+    # figure out optimal Q-value on S'
+    optQ = np.max([Q[new_state, a] for a in actions])
+    
+    # update our q-entry
+    Qnew[state, action] += alpha * (reward + (gamma*optQ) - Q[state, action])
+    
+    # return our Q
+    return Qnew
     
     
 ######################################
@@ -338,14 +369,14 @@ def MCAR(state, thetas):
     assert len(state) == len(thetas), "theta-state length mismatch"
     
     # make a copy to stay safe: "partially-observed state"
-    po_state = state.copy().astype(float)
+    po_state = np.array(state).copy().astype(float)
     
     # generate bernoullis and mask relevant elements
     mask = np.random.binomial(1, thetas).astype(bool)
     po_state[mask] = np.nan
     
     # return our missing-operated state
-    return po_state
+    return tuple(po_state)
 
 
 def Mcolor(state, theta_dict): 
@@ -382,6 +413,7 @@ def Mcolor(state, theta_dict):
     po_state : a copy of state, possibly with some elements set to np.nan
   
     """
+    
     # query what our true color is + get the corresponding thetas_c vector
     c = int(state[2]); thetas_c = theta_dict[c]
     
