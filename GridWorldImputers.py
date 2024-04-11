@@ -229,7 +229,7 @@ def draw_Tmice(Tmice, S, A, focal, Scomplete = None):
         return(new_entry)
 
     
-def single_mouse(A,S, Ostate, Tmice, num_cycles = 10):
+def draw_mouse(Tmice, S, A, Ostate, num_cycles = 10):
     """
     Function for doing mice for a single K
     """
@@ -262,6 +262,44 @@ def single_mouse(A,S, Ostate, Tmice, num_cycles = 10):
     if len(check) > 0:
         assert all(check), "failed to maintain observed state"
     return(Istate)
+
+
+#########################################################
+# Multiple Imputation Functions
+#########################################################
+
+
+def MI(method, Slist, A, Ostate, shuffle = False,
+                 Tstandard = None, Tmice = None, num_cycles = None):
+    """
+    Given K = len(Slist) imputations previous step, for each draw a new
+    imputation using draw_Tstandard() or draw_mouse()
+    
+    Optionally randomly reshuffle the order (mixing the chains)
+
+    """
+    assert method in ["joint","mice"], "invalid method specified"
+    if method == "joint":
+        assert Tstandard is not None
+    if method == "mice":
+        assert Tmice is not None and num_cycles is not None
+    
+    K = len(Slist)
+    NewSlist = [0]*K
+    for i in range(K):
+        if method == "joint":
+            NewSlist[i] = draw_Tstandard(Tstandard,Slist[i],A, Ostate)
+        if method == "mice":
+            NewSlist[i] = draw_mouse(Tmice, Slist[i], A, Ostate, num_cycles = num_cycles)
+                
+    if shuffle:
+        np.random.shuffle(NewSlist) #modifies in place
+        
+
+    return(NewSlist)
+
+    
+
 
 
     
