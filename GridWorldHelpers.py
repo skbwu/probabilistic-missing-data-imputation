@@ -25,15 +25,23 @@ def load_actions():
     return action_descs.copy()
 
 # function for initializing our Q matrix as all zeroes, assuming 3 colors
-def init_Q(d):
-    
+def init_Q(d, include_missing_as_state = False):
+
+    istates = list(range(d))
+    jstates = list(range(d))
+    cstates = list(range(d)) 
+
+    if include_missing_as_state:
+        istates += [-1]
+        jstates += [-1]
+
     # create our Q matrix with missing states too!
     Q = {((i, j, c), action) : 0.0 
-         for i in (list(range(d)) + [-1]) 
-         for j in (list(range(d)) + [-1])
-         for c in (list(range(3)) + [-1]) 
+         for i in istates 
+         for j in jstates
+         for c in cstates 
          for action in list(action_descs.keys())}
-        
+
     # return our Q matrix
     return Q
 
