@@ -48,7 +48,7 @@ def test_miss_mech():
     assert np.isnan(out).all()
    
     
-    print("All tests passed")
+    print("Test miss mech passed")
     
     
     
@@ -173,10 +173,71 @@ def test_imputers():
     
     print("Imputation method tests passed")
     
+ 
+def test_Tupdaters():
     
+    #set-up
+    Tstandard = gwi.init_Tstandard(2,[4,5], 0)
+    Tmice = gwi.init_Tmice(2,[4,5],0)
+    true_state = (0,0,4)
+    pobs_state = (0, np.nan, 4)
+    A = (0,1)
+    
+    #get vector of S' imputations based on S vector and A
+    K = 10
+    Slist = [true_state] * K
+    Slist_new = gwi.MI(method = "joint",
+           Slist = Slist,
+           A = A,
+           pobs_state = pobs_state,
+           shuffle = False,
+           Tstandard = Tstandard)
+
+    assert Tstandard[((0,0,4),A)][(0,0,4)] == 0
+    assert Tstandard[((0,0,4),A)][(0,0,4)] == 0
+    assert Tstandard[((0,1,4),A)][(0,0,4)] == 0
+    
+    gwi.Tstandard_update(Tstandard, Slist, A, Slist_new)
+    
+    assert Tstandard[((0,1,4),A)][(0,0,4)] == 0
+    #these should hold with very high probability
+    assert Tstandard[((0,0,4),A)][(0,1,4)] > 0
+    assert Tstandard[((0,0,4),A)][(0,0,4)] > 0
+    
+    print("Tupdater Tstandard updater passed")
+    
+    
+    #conditional of color, which is 4, given (0, ?)    
+    assert Tmice[2][((0,0,4),A, (1,0))][4] == 0
+    assert Tmice[2][((0,0,4),A, (0,0))][4] == 0
+    assert Tmice[2][((0,0,4),A, (0,1))][4] == 0
+
+    #conditional of x coordinate, which is ?, given (0, 4)    
+    assert Tmice[1][((0,0,4),A, (0,5))][1] == 0
+    assert Tmice[1][((0,0,4),A, (0,4))][0] == 0
+    assert Tmice[1][((0,0,4),A, (0,4))][1] == 0
+    
+    gwi.Tmice_update(Tmice, Slist, A, Slist_new)
+    
+    #conditional of color, which is 4, given (0, ?)    
+    assert Tmice[2][((0,0,4),A, (1,0))][4] == 0
+    #these should hold with very high probability
+    assert Tmice[2][((0,0,4),A, (0,0))][4] > 0
+    assert Tmice[2][((0,0,4),A, (0,1))][4] > 0
+    
+    #conditional of x coordinate, which is ?, given (0, 4)    
+    assert Tmice[1][((0,0,4),A, (0,5))][1] == 0
+    assert Tmice[1][((0,0,4),A, (0,4))][0] > 0
+    assert Tmice[1][((0,0,4),A, (0,4))][1] > 0
+    
+   
+    print("Tupdater Tmice updater passed")
+    
+ 
     
 if __name__ == "__main__":
     test_miss_mech()
-    test_actions()
+    #test_actions() - produces visuals
     test_imputers()
+    test_Tupdaters()
     
