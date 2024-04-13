@@ -376,12 +376,10 @@ def Tmice_update(Tmice, Slist, A, new_Slist):
 # Q update in MI case
 #######################################
 
-def _updateQ_MI(Q, Slist, new_Slist, A, reward, alpha, gamma):
+def updateQ_MI(Q, Slist, new_Slist, A, reward, alpha, gamma):
     """
-    
     Given multiple imputations, update Q fractionally allocating updates
     with alpha/K learning rate where K is length of Slist
-    
     """
     assert len(Slist) == len(new_Slist)
     K = len(Slist)
