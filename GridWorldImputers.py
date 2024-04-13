@@ -276,8 +276,11 @@ def MI(method, Slist, A, Ostate, shuffle = False,
     Given K = len(Slist) imputations previous step, for each draw a new
     imputation using draw_Tstandard() or draw_mouse()
     
-    Optionally randomly reshuffle the order (mixing the chains
-    in terms of how the Q gets updated)
+    Optionally randomly reshuffle the order. This will have the
+    effect of mixing the chains in terms of how the Q gets updated
+    but maybe won't have a huge effect since otherwise the 
+    Slist is not used going forward
+
 
     """
     assert method in ["joint","mice"], "invalid method specified"
