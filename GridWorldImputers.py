@@ -64,9 +64,15 @@ def sample_entry(dic):
     Given dictionary dic with non-negative integers or floats
     values, draw a key at random with probabilities proportional to 
     normalized values
+    
+    If all counts are 0, select one at random
     """
     options = list(dic.keys()) #using fact this keeps order
     counts = np.array(list(dic.values()))  
+    
+    if all(counts == 0):
+        counts = np.ones(len(counts))
+
     probs = counts/sum(counts)
     j = np.random.choice(range(len(options)),1,1,probs)[0]
     return(options[j])
@@ -114,7 +120,29 @@ def draw_Tstandard(Tstandard,S,A, pobs_state):
     #assert [pobs_state[i] == Istate[i] for i in where_no_miss], "failed to maintain observed state"
 
     return(Istate)
+  
+
+def Tstandard_update(Tstandard, Slist, A, Slist_new):
+    """
+    Updates Tstandard (S,A,S') transition counts
+    using the i^{th} entry of Slist as S and the i^th entry
+    of Slist_new as S' 
     
+    Note that the amount added to each count is 1/K where
+    K = len(Slist) so 1 is fractionally allocated according to how
+    often each (S,'S) pair occurs 
+    
+    """
+    K = len(Slist)
+    for k in range(K):
+        #comment: if really going to do this addition many times
+        #have to worry about numeric error accumulating
+        Tstandard[(Slist[k],A)][Slist_new[k]] += 1/K
+       
+    
+
+
+  
 
 
 ########################################################################33
