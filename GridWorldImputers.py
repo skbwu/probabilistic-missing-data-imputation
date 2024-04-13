@@ -383,11 +383,11 @@ def updateQ_MI(Q, Slist, new_Slist, A, reward, alpha, gamma):
     assert len(Slist) == len(new_Slist)
     K = len(Slist)
     for k in range(K):
-        gwh.update_Q(Q, 
-                     pobs_state = Slist[k],
+        Q = gwh.update_Q(Q, 
+                     state = Slist[k],
                      action = A,
                      reward = reward,
-                     new_pobs_state = new_Slist[k],
+                     new_state = new_Slist[k],
                      alpha = alpha/K,
                      gamma = gamma)
     return(Q)
