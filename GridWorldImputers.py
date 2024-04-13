@@ -327,7 +327,6 @@ def MI(method, Slist, A, pobs_state, shuffle = False,
 
 
     """
-    assert len(Slist) == len(new_Slist)
     assert method in ["joint","mice"], "invalid method specified"
     if method == "joint":
         assert Tstandard is not None
