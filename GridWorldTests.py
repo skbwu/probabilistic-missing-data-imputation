@@ -88,38 +88,38 @@ def test_imputers():
     A = (0,1)
     
     #Make sure that if nothing missing, recovers original state
-    Ostate = (1,1,4)
-    out = gwi.draw_mouse(Tmice, S, A, Ostate = Ostate, num_cycles = 3)
-    assert out == Ostate
-    out = gwi.draw_Tstandard(Tstandard,S, A, Ostate)
-    assert out == Ostate 
+    pobs_state = (1,1,4)
+    out = gwi.draw_mouse(Tmice, S, A, pobs_state = pobs_state, num_cycles = 3)
+    assert out == pobs_state
+    out = gwi.draw_Tstandard(Tstandard,S, A, pobs_state)
+    assert out == pobs_state 
 
     #Probabilistic Tests that are very unlikely to fail though it is possible
     count = 0
-    Ostate = (1,np.nan,np.nan)
+    pobs_state = (1,np.nan,np.nan)
     for i in range(100):
-        out = gwi.draw_Tstandard(Tstandard,S, A, Ostate)
-        assert out[0] == Ostate[0]
-        if out[1] != Ostate[1]:
+        out = gwi.draw_Tstandard(Tstandard,S, A, pobs_state)
+        assert out[0] == pobs_state[0]
+        if out[1] != pobs_state[1]:
             count += 1
     assert count > 1
     
     count = 0
-    Ostate = (1,np.nan,np.nan)
+    pobs_state = (1,np.nan,np.nan)
     for i in range(100):
-        out = gwi.draw_mouse(Tmice, S, A, Ostate = Ostate, num_cycles = 3)
-        assert out[0] == Ostate[0]
-        if out[1] != Ostate[1]:
+        out = gwi.draw_mouse(Tmice, S, A, pobs_state = pobs_state, num_cycles = 3)
+        assert out[0] == pobs_state[0]
+        if out[1] != pobs_state[1]:
             count += 1
     assert count > 1
     
     
     Tstandard[(S,A)][(1,0,4)] = 1000 #make this dominate
     count = 0
-    Ostate = (1,np.nan,np.nan)
+    pobs_state = (1,np.nan,np.nan)
     for i in range(100):
-        out = gwi.draw_Tstandard(Tstandard,S, A, Ostate)
-        assert out[0] == Ostate[0]
+        out = gwi.draw_Tstandard(Tstandard,S, A, pobs_state)
+        assert out[0] == pobs_state[0]
         if out == (1,0,4):
             count += 1
     assert count > 90
@@ -127,11 +127,11 @@ def test_imputers():
     
     Tmice[2][(S, A,(1,0))][5] = 1000 #make color 5 dominate over 4
     count = 0
-    Ostate = (1,0,np.nan)
+    pobs_state = (1,0,np.nan)
     for i in range(100):
-        out = gwi.draw_mouse(Tmice, S, A, Ostate = Ostate, num_cycles = 3)
-        assert out[0] == Ostate[0]
-        assert out[1] == Ostate[1]
+        out = gwi.draw_mouse(Tmice, S, A, pobs_state = pobs_state, num_cycles = 3)
+        assert out[0] == pobs_state[0]
+        assert out[1] == pobs_state[1]
         if out == (1,0,5):
             count += 1
     assert count > 90
@@ -140,21 +140,21 @@ def test_imputers():
     #check that elsehwere it's still 50-50 (5 does not dominate over 4)
     count = 0
     S = (0,0,4)
-    Ostate = (1,0,np.nan)
+    pobs_state = (1,0,np.nan)
     for i in range(100):
-        out = gwi.draw_mouse(Tmice, S, A, Ostate = Ostate, num_cycles = 3)
-        assert out[0] == Ostate[0]
-        assert out[1] == Ostate[1]
+        out = gwi.draw_mouse(Tmice, S, A, pobs_state = pobs_state, num_cycles = 3)
+        assert out[0] == pobs_state[0]
+        assert out[1] == pobs_state[1]
         if out == (1,0,5):
             count += 1
     assert count < 90, "still 50-50"
     
     count = 0
-    Ostate = (1,0,np.nan)
+    pobs_state = (1,0,np.nan)
     for i in range(100):
-        out = gwi.draw_Tstandard(Tstandard,S, A, Ostate)
-        assert out[0] == Ostate[0]
-        assert out[1] == Ostate[1]
+        out = gwi.draw_Tstandard(Tstandard,S, A, pobs_state)
+        assert out[0] == pobs_state[0]
+        assert out[1] == pobs_state[1]
         if out == (1,0,4):
             count += 1
     assert count < 90
@@ -164,9 +164,9 @@ def test_imputers():
     count = 0
     S = (0,0,4)
     Tstandard[(S,A)][(1,0,5)] = 1 #make this dominate a little
-    Ostate = (np.nan,np.nan,np.nan)
+    pobs_state = (np.nan,np.nan,np.nan)
     for i in range(100):
-        out = gwi.draw_mouse(Tmice, S, A, Ostate = Ostate, num_cycles = 3)
+        out = gwi.draw_mouse(Tmice, S, A, pobs_state = pobs_state, num_cycles = 3)
         if out == (1,0,5):
             count += 1
     assert count < 95 and count > 5
