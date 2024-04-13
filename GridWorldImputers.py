@@ -131,6 +131,8 @@ def Tstandard_update(Tstandard, Slist, A, Slist_new):
     Note that the amount added to each count is 1/K where
     K = len(Slist) so 1 is fractionally allocated according to how
     often each (S,'S) pair occurs 
+                
+    Modifies matrix in place
     
     """
     K = len(Slist)
@@ -138,7 +140,10 @@ def Tstandard_update(Tstandard, Slist, A, Slist_new):
         #comment: if really going to do this addition many times
         #have to worry about numeric error accumulating
         Tstandard[(Slist[k],A)][Slist_new[k]] += 1/K
+    
        
+    
+
     
 
 
@@ -333,7 +338,26 @@ def MI(method, Slist, A, pobs_state, shuffle = False,
 
     
 
-
+def Tmice_update(Tmice, Slist, A, Slist_new):
+    """
+    Updates Tmice marginal transition counts
+    using the i^{th} entry of Slist as S and the i^th entry
+    of Slist_new as S' 
+    
+    Note that the amount added to each count is 1/K where
+    K = len(Slist) so 1 is fractionally allocated according to how
+    often each (S,'S) pair occurs 
+    
+    """
+    K = len(Slist)
+    #for each of the conditionals
+    for r in [0,1,2]:
+        others = tuple(np.delete([0,1,2],r))
+        #for each chain
+        for k in range(K):
+            partial = (Slist_new[k][others[0]],Slist_new[k][others[1]])
+            Tmice[r][(Slist[k],A,partial)][Slist_new[k][r]] += 1/K
+          
 
     
     
