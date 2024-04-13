@@ -327,8 +327,8 @@ def MI(method, Slist, A, pobs_state, shuffle = False,
 
 
     """
-    assert method in ["joint","mice"], "invalid method specified"
-    if method == "joint":
+    assert method in ["joint","mice", "joint-conservative"], "invalid method specified"
+    if method == "joint" or method == "joint-conservative":
         assert Tstandard is not None
     if method == "mice":
         assert Tmice is not None and num_cycles is not None
@@ -336,7 +336,7 @@ def MI(method, Slist, A, pobs_state, shuffle = False,
     K = len(Slist)
     NewSlist = [0]*K
     for i in range(K):
-        if method == "joint":
+        if method == "joint" or method == "joint-conservative":
             NewSlist[i] = draw_Tstandard(Tstandard,Slist[i],A, pobs_state)
         if method == "mice":
             NewSlist[i] = draw_mouse(Tmice, Slist[i], A, pobs_state, num_cycles = num_cycles)
