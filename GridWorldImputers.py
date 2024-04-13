@@ -20,6 +20,7 @@ def init_Tstandard(d, colors = [0,1,2], init_value = 0):
     colors : list of color codes
     
     init_value: count to initialize with
+  
     
     Returns
     -------
@@ -275,7 +276,8 @@ def MI(method, Slist, A, Ostate, shuffle = False,
     Given K = len(Slist) imputations previous step, for each draw a new
     imputation using draw_Tstandard() or draw_mouse()
     
-    Optionally randomly reshuffle the order (mixing the chains)
+    Optionally randomly reshuffle the order (mixing the chains
+    in terms of how the Q gets updated)
 
     """
     assert method in ["joint","mice"], "invalid method specified"
