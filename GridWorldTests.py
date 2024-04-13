@@ -234,10 +234,38 @@ def test_Tupdaters():
     print("Tupdater Tmice updater passed")
     
  
+def test_Qupdate():
+    
+    Q = gwh.init_Q(3)
+    alpha = 1; gamma = 1
+    assert Q[(0,0,0),(0,0)] == 0
+    assert Q[(1,1,1),(0,0)] == 0
+    
+    Q = gwh.update_Q(Q, state = (0,0,0), action = (0,0),
+                 reward = 10, new_state = (1,1,1), 
+                 alpha = alpha, gamma = gamma)
+    Q = gwh.update_Q(Q, state = (1,1,1), action = (0,0),
+                 reward = 10, new_state = (0,0,0), 
+                 alpha = alpha, gamma = gamma)
+    
+    assert Q[(0,0,0),(0,0)] == 10  #0 + 1[10 + 1*0 - 0]
+    assert Q[(1,1,1),(0,0)] == 20   #0 + 1[10 + 1*10 - 0]
+    
+    alpha = .5; gamma = .5
+    Q = gwh.update_Q(Q, state = (0,0,0), action = (0,0),
+                 reward = 10, new_state = (1,1,1), 
+                 alpha = alpha, gamma = gamma)
+    assert Q[(0,0,0),(0,0)] == 15  #10 + .5[10 + .5*20 - 10]
+    assert Q[(1,1,1),(0,0)] == 20   #unchanged
+    print("Basic update Q test passed")
+
+    
+ 
     
 if __name__ == "__main__":
     test_miss_mech()
     #test_actions() - produces visuals
     test_imputers()
     test_Tupdaters()
+    test_Qupdate()
     
