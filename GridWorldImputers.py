@@ -71,7 +71,7 @@ def sample_entry(dic):
     j = np.random.choice(range(len(options)),1,1,probs)[0]
     return(options[j])
 
-def draw_Tstandard(Tstandard,S,A, Ostate):
+def draw_Tstandard(Tstandard,S,A, pobs_state):
     """
     Given transition matrix and current state and action, draw at random a
     new state
@@ -82,7 +82,7 @@ def draw_Tstandard(Tstandard,S,A, Ostate):
 
     S : tuple describing state
     A : tuple describing action
-    Ostate : observed state
+    pobs_state : observed state
 
     Returns
     -------
@@ -91,27 +91,27 @@ def draw_Tstandard(Tstandard,S,A, Ostate):
     """
     assert type(S) == tuple, "S is not tuple"
     assert type(A) == tuple, "A is not tuple"  
-    assert type(Ostate) == tuple, "Ostate is not a tuple"
+    assert type(pobs_state) == tuple, "pobs_state is not a tuple"
     
     #O state missingness information
-    miss_vec = np.isnan(Ostate)
+    miss_vec = np.isnan(pobs_state)
     num_miss = np.sum(miss_vec)
     where_no_miss = np.where(~miss_vec)[0]
    
     # if fully observed, return state 
     if num_miss == 0:
-        return Ostate
+        return pobs_state
 
     rel_dict = Tstandard[(S,A)]
     
     #filter based on observed states
     if num_miss  > 0:
         #Get relevant dictionary based on last state and action
-        keys = [elem  for elem in rel_dict.keys() if all([elem[i] == Ostate[i] for i in where_no_miss]) ]
+        keys = [elem  for elem in rel_dict.keys() if all([elem[i] == pobs_state[i] for i in where_no_miss]) ]
         rel_dict = {k:v for (k,v) in rel_dict.items() if k in keys}
        
     Istate = sample_entry(rel_dict)
-    #assert [Ostate[i] == Istate[i] for i in where_no_miss], "failed to maintain observed state"
+    #assert [pobs_state[i] == Istate[i] for i in where_no_miss], "failed to maintain observed state"
 
     return(Istate)
     
@@ -230,11 +230,11 @@ def draw_Tmice(Tmice, S, A, focal, Scomplete = None):
         return(new_entry)
 
     
-def draw_mouse(Tmice, S, A, Ostate, num_cycles = 10):
+def draw_mouse(Tmice, S, A, pobs_state, num_cycles = 10):
     """
     Function for doing mice for a single K
     """
-    miss_vec = np.isnan(Ostate)
+    miss_vec = np.isnan(pobs_state)
     num_miss = np.sum(miss_vec)
     where_miss = np.where(miss_vec)[0]
     where_no_miss = np.where(~miss_vec)[0]
@@ -242,14 +242,14 @@ def draw_mouse(Tmice, S, A, Ostate, num_cycles = 10):
     
     # if fully observed, return state 
     if num_miss == 0:
-        return Ostate
+        return pobs_state
     
     # draw initially over marginal x | S,A type dist
     Istate = [0,0,0]
     for k in where_miss:
         Istate[k] = int(draw_Tmice(Tmice, S, A, focal = k))
     for k in where_no_miss:
-        Istate[k] = Ostate[k]
+        Istate[k] = pobs_state[k]
 
     # cycle through draws of conditionals
     Istate = tuple(Istate)    
@@ -259,7 +259,7 @@ def draw_mouse(Tmice, S, A, Ostate, num_cycles = 10):
              if len(where_miss) == 1:
                  break #only need to draw once then
     
-    check = [Ostate[i] == Istate[i] for i in where_no_miss]
+    check = [pobs_state[i] == Istate[i] for i in where_no_miss]
     if len(check) > 0:
         assert all(check), "failed to maintain observed state"
     return(Istate)
@@ -270,7 +270,7 @@ def draw_mouse(Tmice, S, A, Ostate, num_cycles = 10):
 #########################################################
 
 
-def MI(method, Slist, A, Ostate, shuffle = False,
+def MI(method, Slist, A, pobs_state, shuffle = False,
                  Tstandard = None, Tmice = None, num_cycles = None):
     """
     Given K = len(Slist) imputations previous step, for each draw a new
@@ -293,9 +293,9 @@ def MI(method, Slist, A, Ostate, shuffle = False,
     NewSlist = [0]*K
     for i in range(K):
         if method == "joint":
-            NewSlist[i] = draw_Tstandard(Tstandard,Slist[i],A, Ostate)
+            NewSlist[i] = draw_Tstandard(Tstandard,Slist[i],A, pobs_state)
         if method == "mice":
-            NewSlist[i] = draw_mouse(Tmice, Slist[i], A, Ostate, num_cycles = num_cycles)
+            NewSlist[i] = draw_mouse(Tmice, Slist[i], A, pobs_state, num_cycles = num_cycles)
                 
     if shuffle:
         np.random.shuffle(NewSlist) #modifies in place
