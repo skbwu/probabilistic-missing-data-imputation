@@ -217,8 +217,8 @@ def wind(state, d, p_wind_i, p_wind_j):
     given we do move, left vs right or up vs down is
     selected with probabilities (1/2,1/2)
 
+
     """
-    
     # make sure state is an np.array
     state = np.array(state)
     
@@ -273,13 +273,17 @@ def true_move(state, a, gw, gw_colors, p_wind_i, p_wind_j):
     # what's our proposed movement?
     i_new = int(np.clip(a=i-a[1], a_min=0, a_max=d-1))
     j_new = int(np.clip(a=j+a[0], a_min=0, a_max=d-1))
-    
-        
+ 
     # compile the new state (not color yet)
     new_state = np.array([i_new, j_new, np.nan])
     
-    # possibly add wind here
+    # possibly add wind to the new state
     new_state = wind(new_state, d, p_wind_i, p_wind_j)
+    
+    # clip so that wind does not push outside of 3 x 3 grid from original state 
+    i_new = int(np.clip(new_state[0], state[0]-1, state[0]+1))
+    j_new = int(np.clip(new_state[1], state[1]-1, state[1]+1))
+    new_state = np.array([i_new, j_new, np.nan])
     
     # get color of final new state
     new_state[2] = int(gw_colors[int(new_state[0]),
