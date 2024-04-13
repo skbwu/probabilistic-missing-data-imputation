@@ -259,7 +259,70 @@ def test_Qupdate():
     assert Q[(1,1,1),(0,0)] == 20   #unchanged
     print("Basic update Q test passed")
 
+
+def test_miss_pipeline(impute_method):
+    """
+    A dummy run of pipeline
+    """
+    #set some parameters
+    d = 2
+    colors = [4,5]
+    init_T_val = 0
+    p_shuffle = .2
+    K = 10
+    num_cycles = 10
+    alpha = .5; gamma = .25
     
+    #init stuff
+    Q = gwh.init_Q(d, colors = colors)
+    Tstandard = gwi.init_Tstandard(d,colors, init_T_val)
+    Tmice = gwi.init_Tmice(d,colors,init_T_val)
+    
+    #set dummy examples of states, rewards etc
+    true_state = (0,0,4)
+    A = (0,1)
+    reward = 10
+    Slist = [true_state] * K
+    Slist[0] = (0,1,4) 
+    pobs_state = (0, np.nan, np.nan)
+
+    # draw whether to shuffle - won't matter here though
+    shuffle = gwi.shuffle(p_shuffle)
+    
+    #get new state vector
+    new_Slist = gwi.MI(method = impute_method,
+       Slist = Slist,
+       A = A,
+       pobs_state = pobs_state,
+       shuffle = shuffle,
+       Tmice = Tmice,
+       Tstandard = Tstandard,
+       num_cycles = num_cycles)
+    
+    #Update T matrix 
+    if impute_method == "mice":
+        gwi.Tmice_update(Tmice, Slist, A, new_Slist)
+    if impute_method == "joint":
+        gwi.Tstandard_update(Tstandard, Slist, A, new_Slist)
+        
+        
+    #Update Q matrix
+    Q  = gwi.updateQ_MI(Q, Slist, new_Slist, A, reward, alpha, gamma)
+    
+    
+    Slist = new_Slist 
+    
+    print(f"A dummy example of the MI pipeline ran without error for imp method {impute_method}")
+          
+      
+
+
+
+    
+
+
+
+
  
     
 if __name__ == "__main__":
@@ -268,4 +331,7 @@ if __name__ == "__main__":
     test_imputers()
     test_Tupdaters()
     test_Qupdate()
+    test_miss_pipeline("joint")
+    test_miss_pipeline("mice")
+    
     
