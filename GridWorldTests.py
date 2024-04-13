@@ -186,7 +186,7 @@ def test_Tupdaters():
     #get vector of S' imputations based on S vector and A
     K = 10
     Slist = [true_state] * K
-    Slist_new = gwi.MI(method = "joint",
+    new_Slist = gwi.MI(method = "joint",
            Slist = Slist,
            A = A,
            pobs_state = pobs_state,
@@ -197,7 +197,7 @@ def test_Tupdaters():
     assert Tstandard[((0,0,4),A)][(0,0,4)] == 0
     assert Tstandard[((0,1,4),A)][(0,0,4)] == 0
     
-    gwi.Tstandard_update(Tstandard, Slist, A, Slist_new)
+    gwi.Tstandard_update(Tstandard, Slist, A, new_Slist)
     
     assert Tstandard[((0,1,4),A)][(0,0,4)] == 0
     #these should hold with very high probability
@@ -217,7 +217,7 @@ def test_Tupdaters():
     assert Tmice[1][((0,0,4),A, (0,4))][0] == 0
     assert Tmice[1][((0,0,4),A, (0,4))][1] == 0
     
-    gwi.Tmice_update(Tmice, Slist, A, Slist_new)
+    gwi.Tmice_update(Tmice, Slist, A, new_Slist)
     
     #conditional of color, which is 4, given (0, ?)    
     assert Tmice[2][((0,0,4),A, (1,0))][4] == 0
