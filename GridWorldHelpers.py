@@ -29,9 +29,9 @@ def init_Q(d):
     
     # create our Q matrix with missing states too!
     Q = {((i, j, c), action) : 0.0 
-         for i in (list(range(d)) + [np.nan]) 
-         for j in (list(range(d)) + [np.nan])
-         for c in (list(range(3)) + [np.nan]) 
+         for i in (list(range(d)) + [-1]) 
+         for j in (list(range(d)) + [-1])
+         for c in (list(range(3)) + [-1]) 
          for action in list(action_descs.keys())}
         
     # return our Q matrix
