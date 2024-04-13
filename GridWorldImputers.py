@@ -327,6 +327,7 @@ def MI(method, Slist, A, pobs_state, shuffle = False,
 
 
     """
+    assert len(Slist) == len(new_Slist)
     assert method in ["joint","mice"], "invalid method specified"
     if method == "joint":
         assert Tstandard is not None
@@ -359,6 +360,7 @@ def Tmice_update(Tmice, Slist, A, new_Slist):
     often each (S,'S) pair occurs 
     
     """
+    assert len(Slist) == len(new_Slist)
     K = len(Slist)
     #for each of the conditionals
     for r in [0,1,2]:
@@ -367,3 +369,30 @@ def Tmice_update(Tmice, Slist, A, new_Slist):
         for k in range(K):
             partial = (new_Slist[k][others[0]],new_Slist[k][others[1]])
             Tmice[r][(Slist[k],A,partial)][new_Slist[k][r]] += 1/K   
+            
+            
+            
+#######################################
+# Q update in MI case
+#######################################
+
+def _updateQ_MI(Q, Slist, new_Slist, A, reward, alpha, gamma):
+    """
+    
+    Given multiple imputations, update Q fractionally allocating updates
+    with alpha/K learning rate where K is length of Slist
+    
+    """
+    assert len(Slist) == len(new_Slist)
+    K = len(Slist)
+    for k in range(K):
+        gwh.update_Q(Q, 
+                     pobs_state = Slist[k],
+                     action = A,
+                     reward = reward,
+                     new_pobs_state = new_Slist[k],
+                     alpha = alpha/K,
+                     gamma = gamma)
+    return(Q)
+
+
