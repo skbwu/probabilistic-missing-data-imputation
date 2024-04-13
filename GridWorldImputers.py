@@ -5,6 +5,17 @@ from collections import Counter
 import GridWorldHelpers as gwh
 
 
+
+############################
+# Little Helpers
+############################
+def shuffle(p):
+    u = np.random.uniform()
+    if u <= p:
+        return True
+    else:
+        return False 
+
 ############################
 # Principled Approach
 ############################
