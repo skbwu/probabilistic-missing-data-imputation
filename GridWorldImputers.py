@@ -337,7 +337,6 @@ def MI(method, Slist, A, pobs_state, shuffle = False,
     return(NewSlist)
 
     
-
 def Tmice_update(Tmice, Slist, A, Slist_new):
     """
     Updates Tmice marginal transition counts
@@ -356,10 +355,4 @@ def Tmice_update(Tmice, Slist, A, Slist_new):
         #for each chain
         for k in range(K):
             partial = (Slist_new[k][others[0]],Slist_new[k][others[1]])
-            Tmice[r][(Slist[k],A,partial)][Slist_new[k][r]] += 1/K
-          
-
-    
-    
-    
-    
+            Tmice[r][(Slist[k],A,partial)][Slist_new[k][r]] += 1/K   
