@@ -34,6 +34,7 @@ def init_Q(d, include_missing_as_state = False, colors = [0,1,2]):
     if include_missing_as_state:
         istates += [-1]
         jstates += [-1]
+        cstates += [-1]
 
     # create our Q matrix with missing states too!
     Q = {((i, j, c), action) : 0.0 
