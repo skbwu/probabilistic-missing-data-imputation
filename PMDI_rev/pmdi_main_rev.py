@@ -97,14 +97,15 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
     else:
         Q = gwh.init_Q(d, include_missing_as_state=False, colors = colors)
 
-    # initialize Transition matrices
-    Tstandard = gwi.init_Tstandard(d, colors, 0)
-    Tmice = gwi.init_Tmice(d, colors, 0)
-
+   
     # load the possible actions list, specifying whether stay in place allowed
     action_descs = gwh.load_actions(allow_stay_action = allow_stay_action)
     ACTIONS = list(action_descs.keys())
     
+    # initialize Transition matrices
+    Tstandard = gwi.init_Tstandard(d = d, action_list = ACTIONS, colors = colors, init_value = 0)
+    Tmice = gwi.init_Tmice(d = d, action_list = ACTIONS, colors = colors, init_value = 0)
+
     # initialize our starting environment + corresponding colors
     env, env_colors = environments[ce][0], environments[ce][1]
 
@@ -157,24 +158,24 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
         if np.any(np.isnan(pobs_state).mean()):
             # deal with it accordingly to get imputed actions
             if impute_method == "last_fobs":
-                action = gwh.select_action(last_fobs_state, Q, epsilon)
+                action = gwh.select_action(last_fobs_state, ACTIONS, Q, epsilon)
             elif impute_method == "random_action":
                 action = ACTIONS[np.random.choice(a=len(ACTIONS))]
             elif impute_method == "missing_state":
                 # for this method only, we need to convert np.nan to -1
                 pobs_state_temp = tuple([val if ~np.isnan(val) else -1 for val in pobs_state])
-                action = gwh.select_action(pobs_state_temp, Q, epsilon)
+                action = gwh.select_action(pobs_state_temp, ACTIONS, Q, epsilon)
             elif impute_method in MImethods:
                 
                 # vote on action. note: not taking most-selected action because suspect not enough exploration
-                action_options = [gwh.select_action(s, Q, epsilon) for s in imp_state_list]
+                action_options = [gwh.select_action(s, ACTIONS, Q, epsilon) for s in imp_state_list]
                 action = action_options[np.random.choice(len(action_options))]                   
             else:
                 raise Exception("impute_method choice is not currently supported.")
         
         # if no missingness, select an action by standard epsilon greedy 
         else:
-            action = gwh.select_action(pobs_state, Q, epsilon)
+            action = gwh.select_action(pobs_state, ACTIONS, Q, epsilon)
 
 
         ###############################################

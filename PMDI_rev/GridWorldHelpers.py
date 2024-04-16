@@ -313,7 +313,7 @@ def true_move(state, a, gw, gw_colors, p_wind_i, p_wind_j):
 # Taking actions based on Q.
 ######################################
 
-def select_action(state, Q, epsilon):
+def select_action(state, action_list, Q, epsilon):
     """
     Function select actions based on an epsilon greedy policy 
     (or greedy if psilon = 0), maxixmizing over the Q function formatted
@@ -337,10 +337,10 @@ def select_action(state, Q, epsilon):
     greedy_idx = np.argmax([Q[(state, a)] for a in ACTIONS])
 
     # let's actually pick our action index based on epsilon greedy
-    action_idx = greedy_idx if np.random.uniform() > epsilon else np.random.choice(len(ACTIONS))
+    action_idx = greedy_idx if np.random.uniform() > epsilon else np.random.choice(len(action_list))
 
     # return our action
-    return ACTIONS[action_idx]
+    return action_list[action_idx]
 
 
 # function for updating Q

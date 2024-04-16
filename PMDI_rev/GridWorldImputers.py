@@ -21,12 +21,14 @@ def shuffle(p):
 ############################
 
 
-def init_Tstandard(d, colors = [0,1,2], init_value = 0): 
+def init_Tstandard(d, action_list, colors = [0,1,2], init_value = 0): 
     """
     
     Parameters
     ----------
     d : dimension of grid
+    
+    action_list : a list of possible actions
     
     colors : list of color codes
     
@@ -58,14 +60,11 @@ def init_Tstandard(d, colors = [0,1,2], init_value = 0):
     
     
     """
-    # get possible actions
-    action_descs = gwh.load_actions()
-    
     inner_S_dict = {((i,j,c)) : init_value for i in range(d) for j in range(d) for c in colors}
 
 
     T = {((i, j, c), action) : copy.deepcopy(inner_S_dict) for i in range(d) for j in range(d) 
-                for c in colors for action in list(action_descs.keys())}
+                for c in colors for action in action_list}
 
     return(T)    
     
@@ -165,12 +164,14 @@ def Tstandard_update(Tstandard, Slist, A, new_Slist):
 # MICE approach that doesn't use joint info but is lower dimensional
 ########################################################################33
 
-def init_Tmice(d, colors = [0,1,2], init_value = 0 ):
+def init_Tmice(d, action_list, colors = [0,1,2], init_value = 0):
     """
 
     Parameters
     ----------
     d : dimension of grid
+    
+    action_list : a list of possible actions
     
     colors : list of color codes
     
@@ -199,16 +200,14 @@ def init_Tmice(d, colors = [0,1,2], init_value = 0 ):
     Note: the raeson (y,x) are not the typical (x,y) order is because of how Numpy does
     (row,column) indexing 
 
-    """
-    action_descs = gwh.load_actions()
-   
+    """ 
     x_dict = {((i, j, c), action, (u,v)) :  {i: init_value for i in range(d)} for i in range(d) for j in range(d) 
-                for c in colors for action in list(action_descs.keys()) for u in range(d) for v in colors}
+                for c in colors for action in action_list for u in range(d) for v in colors}
 
     y_dict = x_dict.copy() #same structure 
     
     c_dict = {((i, j, c), action, (u,v)) :  {c: init_value for c in colors} for i in range(d) for j in range(d) 
-                for c in colors for action in list(action_descs.keys()) for u in range(d) for v in range(d)}
+                for c in colors for action in action_list for u in range(d) for v in range(d)}
 
     return {0:y_dict,
             1:x_dict, 
