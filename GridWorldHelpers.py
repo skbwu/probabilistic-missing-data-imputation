@@ -1,6 +1,10 @@
 import numpy as np
 import pandas as pd
+
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
+from matplotlib.colors import ListedColormap
+
 import sys, copy, os, shutil
 from tqdm.notebook import tqdm
 import seaborn as sns
@@ -207,6 +211,66 @@ def make_gw_colors(gw):
                 
     # return the colors
     return gw_colors
+
+
+
+def plot_grid(rewards_grid, color_grid):
+    """
+    Visualize the grid rewards and color together
+    
+    Warning: This function is pretty specific to our particular grid set-up with how it draws rectangle
+    """
+    # Create color map
+    # order is green, orange, red, yellow - last number adjusts brightness
+    custom_colors = [(0, 1, 0, 0.3), (1, 0.5, 0, 0.4), (1, 0, 0, 0.45), (1,1,0,.5) ] 
+    cmap = ListedColormap(custom_colors)  
+
+    # Assign the terminal state its own color
+    color_grid = color_grid.copy()
+    color_grid[6,7] = 3
+    
+    d = rewards_grid.shape[0]
+    
+    # set-up grid
+    fig, ax = plt.subplots(figsize=(d, d))
+    ax.imshow(color_grid, cmap=cmap, interpolation='nearest')
+
+    # Add number labels to each square
+    for i in range(rewards_grid.shape[0]):
+        for j in range(rewards_grid.shape[1]):
+            plt.text(j, i, str(rewards_grid[i, j]), ha='center', va='center', color='black', fontweight = 'bold')
+
+    # Set tick positions
+    plt.gca().set_xticks(np.arange(-.5, 8, 1), minor=True) 
+    plt.gca().set_yticks(np.arange(-.5, 8, 1), minor=True) 
+    
+    # get rid of extra tick marks
+    plt.gca().tick_params(which='minor', size=0)
+
+    # Plot a grid of lines at the ticks
+    plt.grid(which='minor', color='black', linestyle='-', linewidth=.5)
+    
+
+    # Add thicker border around the water
+    l = 4
+    x,y = np.where(rewards_grid == -10)
+    width = np.sum(rewards_grid[y[0],:] == -10)
+    height = np.sum(rewards_grid[:,x[0]] == -10) - 1
+    rect = Rectangle((y[0] - 0.5, x[0] - 0.5), width, height, linewidth=l, edgecolor='blue', facecolor='none')
+    ax.add_patch(rect)
+
+    height = 1
+    rect = Rectangle((y[0] - 0.5, x[-1] - 0.5), width, height, linewidth=l, edgecolor='blue', facecolor='none')
+    ax.add_patch(rect)
+
+    # add border around end state - eh, this looks bad
+    #rect = Rectangle((7 - 0.5, 6- 0.5), 1,1, linewidth=2, edgecolor='black', facecolor='none')
+    #ax.add_patch(rect)
+    
+    plt.show()
+
+
+
 
 
 
