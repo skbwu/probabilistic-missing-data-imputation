@@ -14,6 +14,7 @@ import pickle
 # our helper functions for the gridworlds
 import GridWorldHelpers as gwh
 import GridWorldImputers as gwi
+import SimulationHelpers as shelpers
 
 # fix our verbose and max_iters variable (we'll deal with seed at the end!)
 verbose, max_iters = False, 50000
@@ -21,101 +22,8 @@ verbose, max_iters = False, 50000
 
 # In[2]:
 
-
-# a list to store all of our settings
-settings = []
-
-# create a list of settings that we want to try
-for gamma in [1.0, 0.5, 0.0]: # save 0.75 + 0.25 for wave 2.
-    for alpha in [1.0, 0.1]: # boobooed with 0.1. NOW CORRECTED!
-        for epsilon in [0.0, 0.05]:
-            for p_switch in [0.1, 0.0]:
-                for p_wind in [0.0, 0.1]: # save 0.2 for wave 2.
-                    
-                    # assign the i+j dimensions
-                    p_wind_i, p_wind_j = p_wind, p_wind
-                    
-                    # now, let's be careful and set irrelevant parameters to None
-                    for env_missing in ["MCAR", "Mcolor", "Mfog"]:
-                        
-                        # MCAR-specific "thetas" parameter
-                        if env_missing != "MCAR":
-                            thetas_list = [None]
-                        elif env_missing == "MCAR":
-                            thetas_list = [np.ones(3) * theta for theta in [0.0, 0.05, 0.1, 0.2, 0.4]]
-                        else:
-                            raise Exception("Something went wrong with env_missing.")
-                            
-                        # iterate through the "thetas" intended ONLY FOR MCAR, will None-out otherwise.
-                        for thetas in thetas_list:
-                            
-                            # let's work thru thetas_in and thetas_out accordingly
-                            if env_missing != "Mfog":
-                                thetas_IO_list = [(None, None)]
-                            elif env_missing == "Mfog":
-                                thetas_IO_list = [(np.array([0.5, 0.5, 0.5]), np.array([0.0, 0.0, 0.0])),
-                                                  (np.array([0.25, 0.25, 0.25]), np.array([0.1, 0.1, 0.1]))]
-                            else:
-                                raise Exception("Something went wrong with env_missing.")
-                                
-                            # iterate through the thetas_IO intended only for Mfog
-                            for thetas_IO in thetas_IO_list:
-                                
-                                # just unpack from the tuple
-                                thetas_in, thetas_out = thetas_IO
-                                
-                                # theta_dict for "Mcolor" option
-                                if env_missing != "Mcolor":
-                                    theta_dict_list = [None]
-                                elif env_missing == "Mcolor":
-                                    theta_dict_list = [{0 : np.array([0.1, 0.1, 0.1]),
-                                                        1 : np.array([0.2, 0.2, 0.2]),
-                                                        2 : np.array([0.3, 0.3, 0.3])},
-                                                       {0 : np.array([0.1, 0.1, 0.0]),
-                                                        1 : np.array([0.2, 0.2, 0.0]),
-                                                        2 : np.array([0.3, 0.3, 0.0])},]
-                                else:
-                                    raise Exception("Something went wrong with env_missing.")
-                                
-                                # iterate through the theta_dict parameter
-                                for theta_dict in theta_dict_list:
-                                    
-                                    # let's work with the impute_method
-                                    for impute_method in ["last_fobs", "random_action", 
-                                                          "missing_state", "joint", "joint-conservative"]: # MICE WAS YEETED CUZ TOO SLOW
-                                        
-                                        # start joint/mice specific settigns
-                                        if impute_method not in ["joint", "joint-conservative", "mice"]:
-                                            
-                                            # create a bunch of lists of Nones
-                                            p_shuffle_list = [None]
-                                            num_cycles_list = [None]
-                                            K_list = [None]
-                                            
-                                        # joint + mice specific matters
-                                        # MICE WAS EXTREMELY EXTREMELY SLOW. THUS, YEETED.
-                                        elif impute_method in ["joint", "joint-conservative", "mice"]:
-                                            
-                                            # create a bunch of lists of Nones
-                                            p_shuffle_list = [0.0, 0.1] # saving 0.05 for wave2
-                                            num_cycles_list = [1] # [10, 20]
-                                            K_list = [1, 5, 10] # 4/16/2024: ADDING IN K=5!
-                                            
-                                        # as usual, throw a hissy fit
-                                        else:
-                                            raise Exception("Something went wrong with env_missing.")
-                                            
-                                        # iterate through these MICE specific settings
-                                        for p_shuffle in p_shuffle_list:
-                                            for num_cycles in num_cycles_list:
-                                                for K in K_list:
-                                                    
-                                                    # create our setting-tuple + add to our list
-                                                    setting = (gamma, alpha, epsilon, p_switch, 
-                                                               p_wind_i, p_wind_j, env_missing, 
-                                                               thetas, thetas_in, thetas_out, theta_dict, 
-                                                               impute_method, p_shuffle, num_cycles, K)
-                                                    settings.append(setting)
+# get all our settings
+settings = shelpers.get_settings()  #4/16/2024 moved this to a helper so easier to test
 
 
 # In[3]:
@@ -124,6 +32,7 @@ for gamma in [1.0, 0.5, 0.0]: # save 0.75 + 0.25 for wave 2.
 # create a master function
 def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
            p_wind_i, p_wind_j, # float, up-down/left-right wind frequency, {0.0, 0.1, 0.2}. INTENDED EQUAL!
+           allow_stay_action, #4/16/2024 addition 
            env_missing, # environment-missingness governor "MCAR", "Mcolor", "Mfog"
            thetas, # np.array, MCAR, same theta_i values {0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5}
            thetas_in, # np.array, Mfog, in: (0.5, 0.5, 0.5) + (0.25, 0.25, 0.25)
@@ -192,8 +101,8 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
     Tstandard = gwi.init_Tstandard(d, colors, 0)
     Tmice = gwi.init_Tmice(d, colors, 0)
 
-    # load the possible actions list
-    action_descs = gwh.load_actions()
+    # load the possible actions list, specifying whether stay in place allowed
+    action_descs = gwh.load_actions(allow_stay_action = allow_stay_action)
     ACTIONS = list(action_descs.keys())
     
     # initialize our starting environment + corresponding colors
@@ -458,6 +367,12 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
     # start our filename: p_switch = PS, PW = p_wind_{i,j}, MM = missingness mechanism
     fname = f"PS={p_switch}_PW={p_wind_i}_MM={env_missing}"
 
+    # record whether stay in place action was allowed or not
+    if allow_stay_action:
+        fname += "_ASA=T"
+    else:
+        fname += "_ASA=F"
+
     # record the MCAR variables
     if env_missing == "MCAR":
 
@@ -519,13 +434,14 @@ start_idx = int(sys.argv[1])
 for i in range(start_idx*15, (start_idx*15)+15): # REVISED 4/16/2024 to account for the K=5 added settings.
     
     # unpack our settings
-    gamma, alpha, epsilon, p_switch, p_wind_i, p_wind_j, env_missing, thetas, thetas_in, thetas_out, theta_dict, impute_method, p_shuffle, num_cycles, K = settings[i]
+    gamma, alpha, epsilon, p_switch, p_wind_i, p_wind_j, allow_stay_action, env_missing, thetas, thetas_in, thetas_out, theta_dict, impute_method, p_shuffle, num_cycles, K = settings[i]
     
     # do our random seeding
     for seed in range(3):
         
         # just call our runner function
-        output = runner(p_switch=p_switch, p_wind_i=p_wind_i, p_wind_j=p_wind_j, env_missing=env_missing, 
+        output = runner(p_switch=p_switch, p_wind_i=p_wind_i, p_wind_j=p_wind_j,
+                        allow_stay_action = allow_stay_action, env_missing=env_missing, 
                         thetas=thetas, thetas_in=thetas_in, thetas_out=thetas_out, theta_dict=theta_dict, 
                         impute_method=impute_method,
                         p_shuffle=p_shuffle, num_cycles=num_cycles, K=K, 
