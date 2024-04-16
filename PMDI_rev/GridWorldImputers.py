@@ -374,7 +374,7 @@ def Tmice_update(Tmice, Slist, A, new_Slist):
 # Q update in MI case
 #######################################
 
-def updateQ_MI(Q, Slist, new_Slist, A, reward, alpha, gamma):
+def updateQ_MI(Q, Slist, new_Slist, A, action_list, reward, alpha, gamma):
     """
     Given multiple imputations, update Q fractionally allocating updates
     with alpha/K learning rate where K is length of Slist
@@ -385,6 +385,7 @@ def updateQ_MI(Q, Slist, new_Slist, A, reward, alpha, gamma):
         Q = gwh.update_Q(Q, 
                      state = Slist[k],
                      action = A,
+                     action_list = action_list,
                      reward = reward,
                      new_state = new_Slist[k],
                      alpha = alpha/K,

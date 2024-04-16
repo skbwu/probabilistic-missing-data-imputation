@@ -91,16 +91,16 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
     ##### INITIALIZING START OF SIMULATIONS + DATA STRUCTURES #####
     ###############################################################
     
-    # initialize our Q matrix: {((i, j, color), (a1, a2))}
-    if impute_method == "missing_state":
-        Q = gwh.init_Q(d, include_missing_as_state=True, colors = colors)
-    else:
-        Q = gwh.init_Q(d, include_missing_as_state=False, colors = colors)
-
-   
     # load the possible actions list, specifying whether stay in place allowed
     action_descs = gwh.load_actions(allow_stay_action = allow_stay_action)
     ACTIONS = list(action_descs.keys())
+    
+    # initialize our Q matrix: {((i, j, color), (a1, a2))}
+    if impute_method == "missing_state":
+        Q = gwh.init_Q(d, ACTIONS, include_missing_as_state=True, colors = colors)
+    else:
+        Q = gwh.init_Q(d, ACTIONS, include_missing_as_state=False, colors = colors)
+
     
     # initialize Transition matrices
     Tstandard = gwi.init_Tstandard(d = d, action_list = ACTIONS, colors = colors, init_value = 0)
@@ -210,6 +210,11 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
         else:
             raise Exception("The given env_missing mode is not supported.")
 
+        print(action)
+        print(new_pobs_state)
+        print("---")
+        time.sleep(3)
+        
         ###############################################
         # IMPUTATION
         # make our imputation for the new_pobs_state, if not everything is observed.
@@ -265,18 +270,18 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
             Q  = gwi.updateQ_MI(Q, 
                                 Slist = imp_state_list, 
                                 new_Slist = new_imp_state_list, 
-                                A = action, reward = reward, 
-                                alpha = alpha, gamma = gamma)
+                                A = action, action_list = ACTIONS,
+                                reward = reward, alpha = alpha, gamma = gamma)
             
         # if we have random_action method, then we cannot update 
         elif impute_method != "random_action":
-            Q = gwh.update_Q(Q, impu_state, action, reward, new_impu_state, alpha, gamma)
+            Q = gwh.update_Q(Q, impu_state, action, ACTIONS, reward, new_impu_state, alpha, gamma)
     
         #if nothing is missing in last or current state, then we can
         #update Q under random_action
         elif ~np.any(np.isnan(new_pobs_state)):
             if ~np.any(np.isnan(pobs_state)):
-                Q = gwh.update_Q(Q, pobs_state, action, reward, new_pobs_state, alpha, gamma)
+                Q = gwh.update_Q(Q, pobs_state, action, ACTIONS, reward, new_pobs_state, alpha, gamma)
 
         ######################################
         # T update (if needed)

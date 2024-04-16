@@ -18,7 +18,7 @@ ACTION_DESCS = {(0, 0) : "stay",
                 (-1, 1): "diag-left-up"}
 
 # what are the actual list of actions that are possible?
-ACTIONS = list(ACTION_DESCS.keys())
+#ACTIONS = list(ACTION_DESCS.keys())
 
 # just to make sure we can get it quickly
 def load_actions(allow_stay_action):
@@ -29,7 +29,7 @@ def load_actions(allow_stay_action):
         return {k:v for k,v in ACTION_DESCS.items() if k != (0,0)}
 
 # function for initializing our Q matrix as all zeroes, assuming 3 colors
-def init_Q(d, include_missing_as_state = False, colors = [0,1,2]):
+def init_Q(d, action_list, include_missing_as_state = False, colors = [0,1,2]):
 
     istates = list(range(d))
     jstates = list(range(d))
@@ -45,7 +45,7 @@ def init_Q(d, include_missing_as_state = False, colors = [0,1,2]):
          for i in istates 
          for j in jstates
          for c in cstates 
-         for action in ACTIONS}
+         for action in action_list}
 
     # return our Q matrix
     return Q
@@ -300,7 +300,7 @@ def true_move(state, a, gw, gw_colors, p_wind_i, p_wind_j):
     
     # get color of final new state
     new_state[2] = int(gw_colors[int(new_state[0]),
-                                 int(new_state[1])]) #TODO: did I flip these?
+                                 int(new_state[1])])
    
     # convert to a tuple
     new_state = tuple(new_state)
@@ -332,34 +332,36 @@ def select_action(state, action_list, Q, epsilon):
     an action encoded as a length 2 tuple
     """
     assert epsilon >= 0
-
+    
+    # get Q values for that state-action 
+    Qvals = [Q[(state, a)] for a in action_list]
+    
+    # get where the max Q values are
+    max_indices = np.where(Qvals == np.max(Qvals))[0]
+   
     # what is the "greedy" action index?
-    greedy_idx = np.argmax([Q[(state, a)] for a in ACTIONS])
-
+    # break ties by randomly selecting one
+    greedy_idx = max_indices[np.random.choice(len(max_indices))]
+   
     # let's actually pick our action index based on epsilon greedy
     action_idx = greedy_idx if np.random.uniform() > epsilon else np.random.choice(len(action_list))
-
+    
     # return our action
     return action_list[action_idx]
 
 
 # function for updating Q
-def update_Q(Q, state, action, reward, new_state, alpha, gamma):
+def update_Q(Q, state, action, action_list, reward, new_state, alpha, gamma):
     """
     Given Q function, state, action, reward and next state, do a 
     standard Q update
     """
-    
-    # what's our list of ACTIONS again?
-    actions = [(0, 0), (0, 1), (1, 1), 
-               (1, 0), (1, -1), (0, -1), 
-               (-1, -1), (-1, 0), (-1, 1)]
-    
+  
     # make a copy of Q
     Qnew = copy.deepcopy(Q)
     
     # figure out optimal Q-value on S'
-    optQ = np.max([Q[new_state, a] for a in actions])
+    optQ = np.max([Q[new_state, a] for a in action_list])
     
     # update our q-entry
     Qnew[state, action] += alpha * (reward + (gamma*optQ) - Q[state, action])
