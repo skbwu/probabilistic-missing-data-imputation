@@ -210,10 +210,10 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
         else:
             raise Exception("The given env_missing mode is not supported.")
 
-        print(action)
-        print(new_pobs_state)
-        print("---")
-        time.sleep(3)
+        #print(action)
+        #print(new_pobs_state)
+        #print("---")
+        #time.sleep(3)
         
         ###############################################
         # IMPUTATION

@@ -338,11 +338,10 @@ def select_action(state, action_list, Q, epsilon):
     
     # get where the max Q values are
     max_indices = np.where(Qvals == np.max(Qvals))[0]
-   
     # what is the "greedy" action index?
     # break ties by randomly selecting one
     greedy_idx = max_indices[np.random.choice(len(max_indices))]
-   
+ 
     # let's actually pick our action index based on epsilon greedy
     action_idx = greedy_idx if np.random.uniform() > epsilon else np.random.choice(len(action_list))
     
