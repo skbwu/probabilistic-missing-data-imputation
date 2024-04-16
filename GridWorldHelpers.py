@@ -220,18 +220,30 @@ def plot_grid(rewards_grid, color_grid):
     
     Warning: This function is pretty specific to our particular grid set-up with how it draws rectangle
     """
-    # Create color map
-    # order is green, orange, red, yellow - last number adjusts brightness
+    d = rewards_grid.shape[0]
+
+    # Pick colorblind friendly colors
     custom_colors = [(0, 1, 0, 0.3), (1, 0.5, 0, 0.4), (1, 0, 0, 0.45), (1,1,0,.5) ] 
+    green = sns.color_palette("colorblind", 8)[2]
+    orange = sns.color_palette("colorblind", 8)[1]
+    red = sns.color_palette("colorblind", 8)[4]
+    target = sns.color_palette("colorblind", 8)[2] #make it darker green below
+    
+    # Make colors lighter by setting alpha
+    green = (green, .5)
+    orange = (orange, .6)
+    red = (red,.9)
+    target = (target, 1)
+    
+    # Create color map
+    custom_colors = [green, orange, red, target]
     cmap = ListedColormap(custom_colors)  
 
     # Assign the terminal state its own color
     color_grid = color_grid.copy()
     color_grid[6,7] = 3
     
-    d = rewards_grid.shape[0]
-    
-    # set-up grid
+    # Set-up grid
     fig, ax = plt.subplots(figsize=(d, d))
     ax.imshow(color_grid, cmap=cmap, interpolation='nearest')
 
@@ -263,9 +275,9 @@ def plot_grid(rewards_grid, color_grid):
     rect = Rectangle((y[0] - 0.5, x[-1] - 0.5), width, height, linewidth=l, edgecolor='blue', facecolor='none')
     ax.add_patch(rect)
 
-    # add border around end state - eh, this looks bad
-    #rect = Rectangle((7 - 0.5, 6- 0.5), 1,1, linewidth=2, edgecolor='black', facecolor='none')
-    #ax.add_patch(rect)
+    # add border around end state 
+    rect = Rectangle((7 - 0.5, 6- 0.5), 1,1, linewidth=4, edgecolor='black', facecolor='none')
+    ax.add_patch(rect)
     
     plt.show()
 
