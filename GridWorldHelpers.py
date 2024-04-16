@@ -214,7 +214,7 @@ def make_gw_colors(gw):
 
 
 
-def plot_grid(rewards_grid, color_grid):
+def plot_grid(rewards_grid, color_grid, show_fog = False):
     """
     Visualize the grid rewards and color together
     
@@ -234,15 +234,24 @@ def plot_grid(rewards_grid, color_grid):
     orange = (orange, .6)
     red = (red,.9)
     target = (target, 1)
+    white = (1,1,1)
     
     # Create color map
-    custom_colors = [green, orange, red, target]
+    if show_fog:
+        custom_colors = [green, orange, red, target, white]
+    else:
+        custom_colors = [green, orange, red, target]
+
     cmap = ListedColormap(custom_colors)  
 
     # Assign the terminal state its own color
     color_grid = color_grid.copy()
     color_grid[6,7] = 3
+    color_grid[7,0] = 3
     
+    if show_fog:
+        color_grid[0:(2+1),5:(7+1)] = 4
+   
     # Set-up grid
     fig, ax = plt.subplots(figsize=(d, d))
     ax.imshow(color_grid, cmap=cmap, interpolation='nearest')
@@ -279,8 +288,11 @@ def plot_grid(rewards_grid, color_grid):
     rect = Rectangle((7 - 0.5, 6- 0.5), 1,1, linewidth=4, edgecolor='black', facecolor='none')
     ax.add_patch(rect)
     
-    plt.show()
-
+    # add border around end state 
+    rect = Rectangle((0 - 0.5, 7- 0.5), 1,1, linewidth=4, edgecolor='black', facecolor='none')
+    ax.add_patch(rect)
+    
+    
 
 
 
