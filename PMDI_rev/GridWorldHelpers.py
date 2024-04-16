@@ -6,8 +6,8 @@ from tqdm.notebook import tqdm
 import seaborn as sns
 
 
-# Global Parameters  #TODO: capitalize
-action_descs = {(0, 0) : "stay", 
+# Global Parameters 
+ACTION_DESCS = {(0, 0) : "stay", 
                 (0, 1) : "up", 
                 (1, 1) : "diag-right-up", 
                 (1, 0) : "right", 
@@ -18,11 +18,15 @@ action_descs = {(0, 0) : "stay",
                 (-1, 1): "diag-left-up"}
 
 # what are the actual list of actions that are possible?
-ACTIONS = list(action_descs.keys())
+ACTIONS = list(ACTION_DESCS.keys())
 
 # just to make sure we can get it quickly
-def load_actions():
-    return action_descs.copy()
+def load_actions(allow_stay_action):
+    
+    if allow_stay_action:
+        return ACTION_DESCS.copy()
+    else:
+        return {k:v for k,v in ACTION_DESCS.items() if k != (0,0)}
 
 # function for initializing our Q matrix as all zeroes, assuming 3 colors
 def init_Q(d, include_missing_as_state = False, colors = [0,1,2]):
@@ -41,7 +45,7 @@ def init_Q(d, include_missing_as_state = False, colors = [0,1,2]):
          for i in istates 
          for j in jstates
          for c in cstates 
-         for action in list(action_descs.keys())}
+         for action in ACTIONS}
 
     # return our Q matrix
     return Q
