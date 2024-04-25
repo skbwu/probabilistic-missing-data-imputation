@@ -210,10 +210,6 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
         else:
             raise Exception("The given env_missing mode is not supported.")
 
-        #print(action)
-        #print(new_pobs_state)
-        #print("---")
-        #time.sleep(3)
         
         ###############################################
         # IMPUTATION
@@ -232,7 +228,7 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
 
                 # swapping np.nan to -1 to play nicer with dictionary indexing.
                 new_impu_state = tuple([val if ~np.isnan(val) else -1 for val in new_pobs_state])
-
+          
             elif impute_method in MImethods:
 
                 #decide if we will shuffle (affects Q and T updates below)
@@ -262,6 +258,7 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
             if impute_method in MImethods:
                 new_imp_state_list = [new_pobs_state] * int(K)
 
+       
         ######################################
         # Q update (if permitted)
         ######################################
@@ -283,6 +280,7 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
             if ~np.any(np.isnan(pobs_state)):
                 Q = gwh.update_Q(Q, pobs_state, action, ACTIONS, reward, new_pobs_state, alpha, gamma)
 
+    
         ######################################
         # T update (if needed)
         ######################################
@@ -298,11 +296,13 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
                                      A = action,
                                      new_Slist = new_imp_state_list)
             if impute_method == "joint-conservative":
+                #only update if previous and current state are fully observed
                 if ~np.any(np.isnan(new_pobs_state)):
-                    gwi.Tstandard_update(Tstandard, 
-                                         Slist = imp_state_list,
-                                         A = action,
-                                         new_Slist = new_imp_state_list)
+                    if ~np.any(np.isnan(pobs_state)):
+                        gwi.Tstandard_update(Tstandard, 
+                                            Slist = imp_state_list,
+                                            A = action,
+                                            new_Slist = new_imp_state_list)
 
         # check whether our last_fobs_state can be updated
         if ~np.any(np.isnan(pobs_state).mean()):
