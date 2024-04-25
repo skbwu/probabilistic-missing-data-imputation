@@ -219,8 +219,8 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
         if np.any(np.isnan(np.array(new_pobs_state)).mean()):
 
             if impute_method == "last_fobs":
-                new_impu_state = copy.deepcopy(last_fobs_state)
-                #new_impu_state = tuple([i if ~np.isnan(i) else j for (i,j) in zip(new_pobs_state, last_fobs_state)])
+                #new_impu_state = copy.deepcopy(last_fobs_state)
+                new_impu_state = tuple([i if ~np.isnan(i) else j for (i,j) in zip(new_pobs_state, last_fobs_state)])
             
             elif impute_method == "random_action":
                 new_impu_state = None # we're not imputing any states!
