@@ -28,7 +28,8 @@ def get_settings():
                                 if env_missing != "MCAR":
                                     thetas_list = [None]
                                 elif env_missing == "MCAR":
-                                    thetas_list = [np.ones(3) * theta for theta in [0.0, 0.05, 0.1, 0.2, 0.4]]
+                                    thetas_list = [np.ones(3) * theta for theta in [0.0, 0.05, 0.1, 0.2, 0.3, 
+                                                                                    0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95]]
                                 else:
                                     raise Exception("Something went wrong with env_missing.")
                                     
@@ -56,10 +57,16 @@ def get_settings():
                                         elif env_missing == "Mcolor":
                                             theta_dict_list = [{0 : np.array([0.1, 0.1, 0.1]),
                                                                 1 : np.array([0.2, 0.2, 0.2]),
-                                                                2 : np.array([0.3, 0.3, 0.3])},
+                                                                2 : np.array([0.3, 0.3, 0.3])}, #MAR - easier
                                                                {0 : np.array([0.1, 0.1, 0.0]),
                                                                 1 : np.array([0.2, 0.2, 0.0]),
-                                                                2 : np.array([0.3, 0.3, 0.0])},]
+                                                                2 : np.array([0.3, 0.3, 0.0])}, #NMAR - easier
+                                                                {0 : np.array([0.2, 0.2, 0.0]),
+                                                                1 : np.array([0.4, 0.4, 0.0]),
+                                                                2 : np.array([0.6, 0.6, 0.0])}, #MAR - harder
+                                                                {0 : np.array([0.2, 0.2, 0.2]),
+                                                                1 : np.array([0.4, 0.4, 0.4]),
+                                                                2 : np.array([0.6, 0.6, 0.6])},] #NMAR - harder
                                         else:
                                             raise Exception("Something went wrong with env_missing.")
                                         
