@@ -132,6 +132,12 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
     logs = pd.DataFrame(data=None, columns=["total_reward", "steps_river", "path_length", 
                                             "counts_0miss", "counts_1miss", "counts_2miss", "counts_3miss",
                                             "wall_clock_time"])
+    
+    # 4/25/2024: PER-TIMESTEP LOGGING TOO!
+    t_step_logs = pd.DataFrame(data=None, columns=["t_step", "action_i", "action_j", 
+                                                   "true_i", "true_j", "true_c", 
+                                                   "obs_i", "obs_j", "obs_c", 
+                                                   "reward", "wall_clock_time"])
 
     # things we want to store PER EPISODE
     total_reward, steps_river, path_length = 0, 0, 0
@@ -147,7 +153,12 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
 
     # for each timestep ...
     for t_step in range(max_iters):
-
+        
+        # start a timer for this TIMESTEP!
+        start_time_t_step = time.time()
+        
+        # create a row to store our desired TIMESTEP-SPECIFIC METRICS TOO!
+        t_step_row = [t_step]
 
         #############################################################
         # Action selection based on last state(s) or random selection 
@@ -157,7 +168,9 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
         # do we have any missing state values?
         if np.any(np.isnan(pobs_state).mean()):
             # deal with it accordingly to get imputed actions
-            if impute_method == "last_fobs":
+            if impute_method == "last_fobs1":
+                action = gwh.select_action(last_fobs_state, ACTIONS, Q, epsilon)
+            elif impute_method == "last_fobs2":
                 action = gwh.select_action(last_fobs_state, ACTIONS, Q, epsilon)
             elif impute_method == "random_action":
                 action = ACTIONS[np.random.choice(a=len(ACTIONS))]
@@ -176,8 +189,10 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
         # if no missingness, select an action by standard epsilon greedy 
         else:
             action = gwh.select_action(pobs_state, ACTIONS, Q, epsilon)
-
-
+        
+        # add to our logs FOR THIS TIMESTEP!
+        t_step_row += [action[0], action[1]]
+        
         ###############################################
         # Take action A, observe R, S'
         # Taking action affects underlying TRUE state, even if
@@ -190,6 +205,9 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
         # figure out what our new state is, which tells us our reward
         new_true_state = gwh.true_move(true_state, action, env, env_colors, p_wind_i, p_wind_j)
         reward = env[int(new_true_state[0]), int(new_true_state[1])]
+        
+        # record our NEW TRUE STATE
+        t_step_row += [new_true_state[0], new_true_state[1], new_true_state[2]]
 
         # update our reward counter + river counters
         total_reward += reward
@@ -209,7 +227,9 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
             new_pobs_state = gwh.Mfog(new_true_state, i_range, j_range, thetas_in, thetas_out)
         else:
             raise Exception("The given env_missing mode is not supported.")
-
+        
+        # record our NEW POBS STATE + the reward
+        t_step_row += [new_pobs_state[0], new_pobs_state[1], new_pobs_state[2], reward]
         
         ###############################################
         # IMPUTATION
@@ -218,8 +238,10 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
 
         if np.any(np.isnan(np.array(new_pobs_state)).mean()):
 
-            if impute_method == "last_fobs":
-                #new_impu_state = copy.deepcopy(last_fobs_state)
+            if impute_method == "last_fobs1":
+                new_impu_state = copy.deepcopy(last_fobs_state)
+                
+            elif impute_method == "last_fobs2":
                 new_impu_state = tuple([i if ~np.isnan(i) else j for (i,j) in zip(new_pobs_state, last_fobs_state)])
             
             elif impute_method == "random_action":
@@ -352,6 +374,14 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
             # reset our timer, too
             start_time = time.time()
 
+            
+        # end the timer for this TIMESTEP!
+        end_time_t_step = time.time()
+        
+        # wrap up row of TIMESTEP-SPECIFIC METRICS, add to our dataframe
+        t_step_row += [end_time_t_step - start_time_t_step]
+        t_step_logs.loc[len(t_step_logs.index)] = t_step_row
+            
         # status update?
         if verbose == True:
             s = 20
@@ -390,7 +420,7 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
     elif env_missing == "Mcolor":
 
         # only thing that is differential/changing is whether the last value is 0.0 or something else.
-        fname += f"_t-color={theta_dict[0][2]}"
+        fname += f"_t-color={theta_dict[0][1]}+{theta_dict[0][2]}"
 
     # record the Mfog variables    
     elif env_missing == "Mfog":
@@ -420,11 +450,12 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
     if fname not in os.listdir("results"):
         os.mkdir(f"results/{fname}")
 
-    # save the log file to a .csv
-    logs.to_csv(f"results/{fname}/seed={seed}.csv", index=False)
+    # save the EPISODES + STEPWISE log files to a .csv
+    logs.to_csv(f"results/{fname}/episodic_seed={seed}.csv", index=False)
+    t_step_logs.to_csv(f"results/{fname}/stepwise_seed={seed}.csv", index=False)
 
     # save the Q matrix to a .pickle
-    with open(f"results/{fname}/seed={seed}.pickle", "wb") as file:
+    with open(f"results/{fname}/Q_seed={seed}.pickle", "wb") as file:
         pickle.dump(Q, file)
         
     # just for kicks
@@ -438,13 +469,13 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
 start_idx = int(sys.argv[1])
 
 # which settings are we working on?
-for i in range(start_idx*15, (start_idx*15)+15): # REVISED 4/16/2024 to account for the K=5 added settings.
+for i in range(start_idx*16, (start_idx*16)+16): # REVISED 4/16/2024 to account for the K=5 added settings.
     
     # unpack our settings
     gamma, alpha, epsilon, p_switch, p_wind_i, p_wind_j, allow_stay_action, env_missing, thetas, thetas_in, thetas_out, theta_dict, impute_method, p_shuffle, num_cycles, K = settings[i]
     
     # do our random seeding
-    for seed in range(3):
+    for seed in range(5):
         
         # just call our runner function
         output = runner(p_switch=p_switch, p_wind_i=p_wind_i, p_wind_j=p_wind_j,

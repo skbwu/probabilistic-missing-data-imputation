@@ -74,7 +74,7 @@ def get_settings():
                                         for theta_dict in theta_dict_list:
                                             
                                             # let's work with the impute_method
-                                            for impute_method in ["last_fobs", "random_action", 
+                                            for impute_method in ["last_fobs1", "last_fobs2", "random_action", 
                                                                   "missing_state", "joint", "joint-conservative"]: # MICE WAS YEETED CUZ TOO SLOW
                                                 
                                                 # start joint/mice specific settigns

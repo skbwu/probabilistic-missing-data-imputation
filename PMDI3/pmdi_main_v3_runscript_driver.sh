@@ -17,10 +17,10 @@ if [ ! -d "results" ]; then
 fi
 
 # iterate through our settings, indexed by this integer
-for ((i = 0; i < 432; i++)); do
+for ((i = 0; i < 1728; i++)); do
 
     # launch our job
-    sbatch pmdi_main_rev_runscript.sh $i
+    sbatch pmdi_main_v3_runscript.sh $i
     sleep 0.5
 
 done
