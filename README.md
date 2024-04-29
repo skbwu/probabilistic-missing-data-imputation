@@ -3,6 +3,7 @@ This repo accompanies the paper "Missing Data Multiple Imputation for Tabular Q-
 
 Within the `src` directory:
 
+* `GridWorldMain` contains the main function for running various methods in our environment
 * `GridWorldHelpers` contains functions for setting up and visualizing the environment, taking an action in that environment, generating the missingness under various mechanisms, and doing Q learning
 * `GridWorldImputers` contains functions for implementing MI
 * `SimulationHelpers` contains functions that aid in running our simulations
