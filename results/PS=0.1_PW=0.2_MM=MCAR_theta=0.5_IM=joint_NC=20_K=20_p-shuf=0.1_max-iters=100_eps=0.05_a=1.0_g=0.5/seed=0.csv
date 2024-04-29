@@ -1,2 +1,0 @@
-total_reward,steps_river,path_length,counts_0miss,counts_1miss,counts_2miss,counts_3miss,wall_clock_time
-3.0,0.0,98.0,13.0,37.0,38.0,10.0,12.80260419845581
