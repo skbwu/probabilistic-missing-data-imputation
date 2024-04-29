@@ -64,7 +64,7 @@ def init_Q(d, action_list, include_missing_as_state = False, colors = [0,1,2]):
 
 def build_grids(d, baseline_penalty = -1, 
                 water_penalty = -10,
-                end_reward = 10):
+                end_reward = 100):
     """
     Build grid worlds with state vector (y,x,c) characterized by the presence
     of water (negative reward) and dry land (positive reward) as well
@@ -258,12 +258,16 @@ def plot_grid(rewards_grid, color_grid, show_fog = False):
    
     # Set-up grid
     fig, ax = plt.subplots(figsize=(d, d))
+    ax.set_yticks([])
+    ax.set_xticks([])
     ax.imshow(color_grid, cmap=cmap, interpolation='nearest')
 
     # Add number labels to each square
     for i in range(rewards_grid.shape[0]):
         for j in range(rewards_grid.shape[1]):
-            plt.text(j, i, str(rewards_grid[i, j]), ha='center', va='center', color='black', fontweight = 'bold')
+            plt.text(j, i, str(rewards_grid[i, j]), 
+                     ha='center', va='center', color='black', 
+                     fontweight = 'bold', fontsize = 24)
 
     # Set tick positions
     plt.gca().set_xticks(np.arange(-.5, 8, 1), minor=True) 
@@ -273,11 +277,11 @@ def plot_grid(rewards_grid, color_grid, show_fog = False):
     plt.gca().tick_params(which='minor', size=0)
 
     # Plot a grid of lines at the ticks
-    plt.grid(which='minor', color='black', linestyle='-', linewidth=.5)
+    plt.grid(which='minor', color='black', linestyle='-', linewidth=1.5)
     
 
     # Add thicker border around the water
-    l = 4
+    l = 8
     x,y = np.where(rewards_grid == -10)
     width = np.sum(rewards_grid[y[0],:] == -10)
     height = np.sum(rewards_grid[:,x[0]] == -10) - 1
@@ -289,11 +293,11 @@ def plot_grid(rewards_grid, color_grid, show_fog = False):
     ax.add_patch(rect)
 
     # add border around end state 
-    rect = Rectangle((7 - 0.5, 6- 0.5), 1,1, linewidth=4, edgecolor='black', facecolor='none')
+    rect = Rectangle((7 - 0.5, 6- 0.5), 1,1, linewidth=l, edgecolor='black', facecolor='none')
     ax.add_patch(rect)
     
     # add border around end state 
-    rect = Rectangle((0 - 0.5, 7- 0.5), 1,1, linewidth=4, edgecolor='black', facecolor='none')
+    rect = Rectangle((0 - 0.5, 7- 0.5), 1,1, linewidth=l, edgecolor='black', facecolor='none')
     ax.add_patch(rect)
     
 
