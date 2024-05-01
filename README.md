@@ -9,8 +9,8 @@ Within the `src` directory:
 * `SimulationHelpers` contains functions that aid in running our simulations
 * `GridWorldTests` contains some tests of various functions in the above scripts
 
-**To run our simulation:** run `pmdi_main_v3_runscript_driver.sh' after making appropriate updates to filepaths.
+**To run our simulation:** run `pmdi_main_v3_runscript_driver.sh` after making appropriate updates to filepaths.
 
-**To generate analysis files**: run ``analyzer_main_runscript_driver.sh` and use `analyzer.ipynb' to combine the resulting files.
+**To generate analysis files**: run `analyzer_main_runscript_driver.sh` and use `analyzer.ipynb` to combine the resulting files.
 
 **To generate figures**: run `figures.ipynb`
