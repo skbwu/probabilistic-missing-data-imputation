@@ -10,4 +10,7 @@ Within the `src` directory:
 * `GridWorldTests` contains some tests of various functions in the above scripts
 
 
+Other scripts are for running our particular simulation, analyzing the results, and producing the figures in the paper. 
+
+
 
