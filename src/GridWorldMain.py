@@ -5,9 +5,9 @@ import copy, time
 from IPython.display import clear_output
 import pickle
 
+import GridWorldEnvironments as gwe # added 7/16/2024
 import GridWorldHelpers as gwh
 import GridWorldImputers as gwi
-
 
 
 # create a master function
@@ -28,7 +28,13 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
            gamma, # discount factor (0.0, 0.25, 0.5, 0.75, 1.0)
            max_iters, # how many iterations are we going for?
            seed, # randomization seed
-           verbose=False): # intermediate outputs or nah?
+           verbose=False, # intermediate outputs or nah?
+           river_restart=False): # option to force agent back to starting point if fall into river. 7/16/2024. 
+    
+    # for better referencing later (7/16/2024).
+    baseline_penalty = -1
+    water_penalty = -10
+    end_reward = 100
 
     # For convenience
     MImethods = ["joint", "mice", "joint-conservative"]
@@ -42,12 +48,12 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
     # initializing our environments + corresponding colors
     d = 8 # dimension of our gridworld
     colors = [0,1,2] #colors encoded with 0,1,2
-    gw0, gw1, gw2 = gwh.build_grids(d=8, baseline_penalty = -1, 
-                                    water_penalty = -10, 
-                                    end_reward = 100)
-    gw0_colors = gwh.make_gw_colors(gw0)
-    gw1_colors = gwh.make_gw_colors(gw1)
-    gw2_colors = gwh.make_gw_colors(gw2)
+    gw0, gw1, gw2 = gwe.build_grids(d=8, baseline_penalty = baseline_penalty, 
+                                    water_penalty = water_penalty, 
+                                    end_reward = end_reward)
+    gw0_colors = gwe.make_gw_colors(gw0)
+    gw1_colors = gwe.make_gw_colors(gw1)
+    gw2_colors = gwe.make_gw_colors(gw2)
 
     # store quick-access indices for the environment
     environments = {
@@ -78,9 +84,9 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
     
     # initialize our Q matrix: {((i, j, color), (a1, a2))}
     if impute_method == "missing_state":
-        Q = gwh.init_Q(d, ACTIONS, include_missing_as_state=True, colors = colors)
+        Q = gwi.init_Q(d, ACTIONS, include_missing_as_state=True, colors = colors)
     else:
-        Q = gwh.init_Q(d, ACTIONS, include_missing_as_state=False, colors = colors)
+        Q = gwi.init_Q(d, ACTIONS, include_missing_as_state=False, colors = colors)
 
     
     # initialize Transition matrices
@@ -150,26 +156,26 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
         if np.any(np.isnan(pobs_state).mean()):
             # deal with it accordingly to get imputed actions
             if impute_method == "last_fobs1":
-                action = gwh.select_action(last_fobs_state, ACTIONS, Q, epsilon)
+                action = gwi.select_action(last_fobs_state, ACTIONS, Q, epsilon)
             elif impute_method == "last_fobs2":
-                action = gwh.select_action(last_fobs_state, ACTIONS, Q, epsilon)
+                action = gwi.select_action(last_fobs_state, ACTIONS, Q, epsilon)
             elif impute_method == "random_action":
                 action = ACTIONS[np.random.choice(a=len(ACTIONS))]
             elif impute_method == "missing_state":
                 # for this method only, we need to convert np.nan to -1
                 pobs_state_temp = tuple([val if ~np.isnan(val) else -1 for val in pobs_state])
-                action = gwh.select_action(pobs_state_temp, ACTIONS, Q, epsilon)
+                action = gwi.select_action(pobs_state_temp, ACTIONS, Q, epsilon)
             elif impute_method in MImethods:
                 
                 # vote on action. note: not taking most-selected action because suspect not enough exploration
-                action_options = [gwh.select_action(s, ACTIONS, Q, epsilon) for s in imp_state_list]
+                action_options = [gwi.select_action(s, ACTIONS, Q, epsilon) for s in imp_state_list]
                 action = action_options[np.random.choice(len(action_options))]                   
             else:
                 raise Exception("impute_method choice is not currently supported.")
         
         # if no missingness, select an action by standard epsilon greedy 
         else:
-            action = gwh.select_action(pobs_state, ACTIONS, Q, epsilon)
+            action = gwi.select_action(pobs_state, ACTIONS, Q, epsilon)
         
         # add to our logs FOR THIS TIMESTEP!
         t_step_row += [action[0], action[1]]
@@ -181,18 +187,22 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
         ###############################################
 
         # toggle our environment potentially!
-        env, env_colors = environments[gwh.get_environment(ce, p_switch, indices)]
+        env, env_colors = environments[gwe.get_environment(ce, p_switch, indices)]
 
         # figure out what our new state is, which tells us our reward
         new_true_state = gwh.true_move(true_state, action, env, env_colors, p_wind_i, p_wind_j)
         reward = env[int(new_true_state[0]), int(new_true_state[1])]
+        
+        # have the option of moving back to start if fall into the river
+        if (reward == water_penalty) and (river_restart == True):
+            new_true_state = (7, 0, 0.0)
         
         # record our NEW TRUE STATE
         t_step_row += [new_true_state[0], new_true_state[1], new_true_state[2]]
 
         # update our reward counter + river counters
         total_reward += reward
-        if reward == -10:
+        if reward == water_penalty:
             steps_river += 1
 
         ###############################################
@@ -276,13 +286,13 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
             
         # if we have random_action method, then we cannot update 
         elif impute_method != "random_action":
-            Q = gwh.update_Q(Q, impu_state, action, ACTIONS, reward, new_impu_state, alpha, gamma)
+            Q = gwi.update_Q(Q, impu_state, action, ACTIONS, reward, new_impu_state, alpha, gamma)
     
         #if nothing is missing in last or current state, then we can
         #update Q under random_action
         elif ~np.any(np.isnan(new_pobs_state)):
             if ~np.any(np.isnan(pobs_state)):
-                Q = gwh.update_Q(Q, pobs_state, action, ACTIONS, reward, new_pobs_state, alpha, gamma)
+                Q = gwi.update_Q(Q, pobs_state, action, ACTIONS, reward, new_pobs_state, alpha, gamma)
 
     
         ######################################

@@ -15,6 +15,92 @@ def shuffle(p):
         return True
     else:
         return False 
+    
+######################################
+# Taking actions based on Q.
+######################################
+
+
+# function for initializing our Q matrix as all zeroes, assuming 3 colors
+def init_Q(d, action_list, include_missing_as_state = False, colors = [0,1,2]):
+
+    istates = list(range(d))
+    jstates = list(range(d))
+    cstates = colors
+
+    if include_missing_as_state:
+        istates += [-1]
+        jstates += [-1]
+        cstates += [-1]
+
+    # create our Q matrix with missing states too!
+    Q = {((i, j, c), action) : 0.0 
+         for i in istates 
+         for j in jstates
+         for c in cstates 
+         for action in action_list}
+
+    # return our Q matrix
+    return Q
+
+
+def select_action(state, action_list, Q, epsilon):
+    """
+    Function select actions based on an epsilon greedy policy 
+    (or greedy if psilon = 0), maxixmizing over the Q function formatted
+    as output by init_Q
+
+    Parameters
+    ----------
+    state : tuple encoding state to select action for
+
+    Q : Q matrix
+
+    epsilon : int or float >= 0
+
+    Returns
+    -------
+    an action encoded as a length 2 tuple
+    """
+    assert epsilon >= 0
+    
+    # get Q values for that state-action 
+    Qvals = [Q[(state, a)] for a in action_list]
+        
+    # get where the max Q values are
+    max_indices = np.where(Qvals == np.max(Qvals))[0]
+    # what is the "greedy" action index?
+    # break ties by randomly selecting one
+    greedy_idx = max_indices[np.random.choice(len(max_indices))]
+
+    # let's actually pick our action index based on epsilon greedy
+    action_idx = greedy_idx if np.random.uniform() > epsilon else np.random.choice(len(action_list))
+
+    # return our action
+    return action_list[action_idx]
+        
+        
+
+
+# function for updating Q
+def update_Q(Q, state, action, action_list, reward, new_state, alpha, gamma):
+    """
+    Given Q function, state, action, reward and next state, do a 
+    standard Q update
+    """
+  
+    # make a copy of Q
+    Qnew = copy.deepcopy(Q)
+    
+    # figure out optimal Q-value on S'
+    optQ = np.max([Q[new_state, a] for a in action_list])
+    
+    # update our q-entry
+    Qnew[state, action] += alpha * (reward + (gamma*optQ) - Q[state, action])
+    
+    # return our Q
+    return Qnew
+    
 
 ############################
 # Principled Approach
@@ -150,16 +236,69 @@ def Tstandard_update(Tstandard, Slist, A, new_Slist):
         #comment: if really going to do this addition many times
         #have to worry about numeric error accumulating
         Tstandard[(Slist[k],A)][new_Slist[k]] += 1/K
+        
+        
+#########################################################
+# Multiple Imputation Functions
+#########################################################
+
+
+def MI(method, Slist, A, pobs_state, shuffle = False,
+                 Tstandard = None, Tmice = None, num_cycles = None):
+    """
+    Given K = len(Slist) imputations previous step, for each draw a new
+    imputation using draw_Tstandard() or draw_mouse()
     
+    Optionally randomly reshuffle the order. This will have the
+    effect of mixing the chains in terms of how the Q gets updated
+    but maybe won't have a huge effect since otherwise the 
+    Slist is not used going forward
+
+
+    """
+    assert method in ["joint","mice", "joint-conservative"], "invalid method specified"
+    if method == "joint" or method == "joint-conservative":
+        assert Tstandard is not None
+    if method == "mice":
+        assert Tmice is not None and num_cycles is not None
+    
+    K = len(Slist)
+    NewSlist = [0]*K
+    for i in range(K):
+        if method == "joint" or method == "joint-conservative":
+            NewSlist[i] = draw_Tstandard(Tstandard,Slist[i],A, pobs_state)
+        if method == "mice":
+            NewSlist[i] = draw_mouse(Tmice, Slist[i], A, pobs_state, num_cycles = num_cycles)
+                
+    if shuffle:
+        np.random.shuffle(NewSlist) #modifies in place
+        
+
+    return(NewSlist)
        
-    
+#######################################
+# Q update in MI case
+#######################################
+
+def updateQ_MI(Q, Slist, new_Slist, A, action_list, reward, alpha, gamma):
+    """
+    Given multiple imputations, update Q fractionally allocating updates
+    with alpha/K learning rate where K is length of Slist
+    """
+    assert len(Slist) == len(new_Slist)
+    K = len(Slist)
+    for k in range(K):
+        Q = update_Q(Q, 
+                     state = Slist[k],
+                     action = A,
+                     action_list = action_list,
+                     reward = reward,
+                     new_state = new_Slist[k],
+                     alpha = alpha/K,
+                     gamma = gamma)
+    return(Q)    
 
     
-
-
-  
-
-
 ########################################################################33
 # MICE approach that doesn't use joint info but is lower dimensional
 ########################################################################33
@@ -307,45 +446,6 @@ def draw_mouse(Tmice, S, A, pobs_state, num_cycles = 10):
         assert all(check), "failed to maintain observed state"
     return(Istate)
 
-
-#########################################################
-# Multiple Imputation Functions
-#########################################################
-
-
-def MI(method, Slist, A, pobs_state, shuffle = False,
-                 Tstandard = None, Tmice = None, num_cycles = None):
-    """
-    Given K = len(Slist) imputations previous step, for each draw a new
-    imputation using draw_Tstandard() or draw_mouse()
-    
-    Optionally randomly reshuffle the order. This will have the
-    effect of mixing the chains in terms of how the Q gets updated
-    but maybe won't have a huge effect since otherwise the 
-    Slist is not used going forward
-
-
-    """
-    assert method in ["joint","mice", "joint-conservative"], "invalid method specified"
-    if method == "joint" or method == "joint-conservative":
-        assert Tstandard is not None
-    if method == "mice":
-        assert Tmice is not None and num_cycles is not None
-    
-    K = len(Slist)
-    NewSlist = [0]*K
-    for i in range(K):
-        if method == "joint" or method == "joint-conservative":
-            NewSlist[i] = draw_Tstandard(Tstandard,Slist[i],A, pobs_state)
-        if method == "mice":
-            NewSlist[i] = draw_mouse(Tmice, Slist[i], A, pobs_state, num_cycles = num_cycles)
-                
-    if shuffle:
-        np.random.shuffle(NewSlist) #modifies in place
-        
-
-    return(NewSlist)
-
     
 def Tmice_update(Tmice, Slist, A, new_Slist):
     """
@@ -367,29 +467,5 @@ def Tmice_update(Tmice, Slist, A, new_Slist):
         for k in range(K):
             partial = (new_Slist[k][others[0]],new_Slist[k][others[1]])
             Tmice[r][(Slist[k],A,partial)][new_Slist[k][r]] += 1/K   
-            
-            
-            
-#######################################
-# Q update in MI case
-#######################################
-
-def updateQ_MI(Q, Slist, new_Slist, A, action_list, reward, alpha, gamma):
-    """
-    Given multiple imputations, update Q fractionally allocating updates
-    with alpha/K learning rate where K is length of Slist
-    """
-    assert len(Slist) == len(new_Slist)
-    K = len(Slist)
-    for k in range(K):
-        Q = gwh.update_Q(Q, 
-                     state = Slist[k],
-                     action = A,
-                     action_list = action_list,
-                     reward = reward,
-                     new_state = new_Slist[k],
-                     alpha = alpha/K,
-                     gamma = gamma)
-    return(Q)
 
 
