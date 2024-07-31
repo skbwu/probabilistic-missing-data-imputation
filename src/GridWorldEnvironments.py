@@ -64,6 +64,19 @@ def build_grids(d, baseline_penalty = -1,
     return(gw0, gw1, gw2)
 
 
+def get_state_value_lists(d, colors):
+    """
+    Given dimension of grid and a list of colors,
+    create state_value_lists, a list of lists where each sublist
+    gives the possible values of that dimension of the state
+    
+    In particular, order is 1:d, 1:d and then the list of colors
+    """
+    state_value_lists = [list(range(d)),
+                      list(range(d)),
+                      colors]
+    
+    return(state_value_lists)
 
 def visualize_reward_grid(gw, ax):
     """
