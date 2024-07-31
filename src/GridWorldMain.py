@@ -80,18 +80,26 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
     
     # load the possible actions list, specifying whether stay in place allowed
     action_descs = gwh.load_actions(allow_stay_action = allow_stay_action)
-    ACTIONS = list(action_descs.keys())
+    action_list = list(action_descs.keys())
+    
+    # specify a state_value_list #new 7.31.2024
+    state_value_lists = gwh.get_state_value_lists(d, colors)
     
     # initialize our Q matrix: {((i, j, color), (a1, a2))}
     if impute_method == "missing_state":
-        Q = gwi.init_Q(d, ACTIONS, include_missing_as_state=True, colors = colors)
+        Q = gwi.init_Q(state_value_lists,
+                       action_list, 
+                       include_missing_as_state=True,
+                       missing_as_state_value = -1)
     else:
-        Q = gwi.init_Q(d, ACTIONS, include_missing_as_state=False, colors = colors)
+        Q = gwi.init_Q(state_value_lists,
+                       action_list, 
+                       include_missing_as_state=False)
 
     
     # initialize Transition matrices
-    Tstandard = gwi.init_Tstandard(d = d, action_list = ACTIONS, colors = colors, init_value = 0)
-    Tmice = gwi.init_Tmice(d = d, action_list = ACTIONS, colors = colors, init_value = 0)
+    Tstandard = gwi.init_Tstandard(d = d, action_list = action_list, colors = colors, init_value = 0)
+    Tmice = gwi.init_Tmice(d = d, action_list = action_list, colors = colors, init_value = 0)
 
     # initialize our starting environment + corresponding colors
     env, env_colors = environments[ce][0], environments[ce][1]
@@ -156,26 +164,26 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
         if np.any(np.isnan(pobs_state).mean()):
             # deal with it accordingly to get imputed actions
             if impute_method == "last_fobs1":
-                action = gwi.select_action(last_fobs_state, ACTIONS, Q, epsilon)
+                action = gwi.select_action(last_fobs_state, action_list, Q, epsilon)
             elif impute_method == "last_fobs2":
-                action = gwi.select_action(last_fobs_state, ACTIONS, Q, epsilon)
+                action = gwi.select_action(last_fobs_state, action_list, Q, epsilon)
             elif impute_method == "random_action":
-                action = ACTIONS[np.random.choice(a=len(ACTIONS))]
+                action = action_list[np.random.choice(a=len(action_list))]
             elif impute_method == "missing_state":
                 # for this method only, we need to convert np.nan to -1
                 pobs_state_temp = tuple([val if ~np.isnan(val) else -1 for val in pobs_state])
-                action = gwi.select_action(pobs_state_temp, ACTIONS, Q, epsilon)
+                action = gwi.select_action(pobs_state_temp, action_list, Q, epsilon)
             elif impute_method in MImethods:
                 
                 # vote on action. note: not taking most-selected action because suspect not enough exploration
-                action_options = [gwi.select_action(s, ACTIONS, Q, epsilon) for s in imp_state_list]
+                action_options = [gwi.select_action(s, action_list, Q, epsilon) for s in imp_state_list]
                 action = action_options[np.random.choice(len(action_options))]                   
             else:
                 raise Exception("impute_method choice is not currently supported.")
         
         # if no missingness, select an action by standard epsilon greedy 
         else:
-            action = gwi.select_action(pobs_state, ACTIONS, Q, epsilon)
+            action = gwi.select_action(pobs_state, action_list, Q, epsilon)
         
         # add to our logs FOR THIS TIMESTEP!
         t_step_row += [action[0], action[1]]
@@ -281,18 +289,18 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
             Q  = gwi.updateQ_MI(Q, 
                                 Slist = imp_state_list, 
                                 new_Slist = new_imp_state_list, 
-                                A = action, action_list = ACTIONS,
+                                A = action, action_list = action_list,
                                 reward = reward, alpha = alpha, gamma = gamma)
             
         # if we have random_action method, then we cannot update 
         elif impute_method != "random_action":
-            Q = gwi.update_Q(Q, impu_state, action, ACTIONS, reward, new_impu_state, alpha, gamma)
+            Q = gwi.update_Q(Q, impu_state, action, action_list, reward, new_impu_state, alpha, gamma)
     
         #if nothing is missing in last or current state, then we can
         #update Q under random_action
         elif ~np.any(np.isnan(new_pobs_state)):
             if ~np.any(np.isnan(pobs_state)):
-                Q = gwi.update_Q(Q, pobs_state, action, ACTIONS, reward, new_pobs_state, alpha, gamma)
+                Q = gwi.update_Q(Q, pobs_state, action, action_list, reward, new_pobs_state, alpha, gamma)
 
     
         ######################################
