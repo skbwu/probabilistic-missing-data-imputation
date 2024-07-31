@@ -1,3 +1,9 @@
+"""
+This script contains functions which implement the actions of an agent
+in the grid world and the behavior of the grid world, including wind
+
+"""
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -31,6 +37,7 @@ def load_actions(allow_stay_action):
     else:
         return {k:v for k,v in ACTION_DESCS.items() if k != (0,0)}
     
+
 
 ##############################################
 # Implementing Actions in True State Space
