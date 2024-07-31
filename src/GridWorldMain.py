@@ -82,7 +82,7 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
     action_descs = gwh.load_actions(allow_stay_action = allow_stay_action)
     action_list = list(action_descs.keys())
     
-    # specify a state_value_list #new 7.31.2024
+    # specify a state_value_list - note order matters #new 7.31.2024
     state_value_lists = gwh.get_state_value_lists(d, colors)
     
     # initialize our Q matrix: {((i, j, color), (a1, a2))}
@@ -98,7 +98,8 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
 
     
     # initialize Transition matrices
-    Tstandard = gwi.init_Tstandard(d = d, action_list = action_list, colors = colors, init_value = 0)
+    Tstandard = gwi.init_Tstandard(state_value_lists = state_value_lists,
+                                   action_list = action_list, init_value = 0.0)
     Tmice = gwi.init_Tmice(d = d, action_list = action_list, colors = colors, init_value = 0)
 
     # initialize our starting environment + corresponding colors

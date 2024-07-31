@@ -52,14 +52,14 @@ def init_Q(
     as encoded by state_value_lists and action_list
 
     """
-    Q = {}
     if include_missing_as_state:
         state_value_lists = [elem + [missing_as_state_value] for elem 
                              in state_value_lists]
         
-    for elem in itertools.product(*state_value_lists):
-        for a in action_list:
-            Q[(elem, a)] = 0.0
+    Q = {(elem, a) : 0.0 
+         for elem in itertools.product(*state_value_lists)
+         for a in action_list}
+        
     return Q
 
 
@@ -127,16 +127,21 @@ def update_Q(Q, state, action, action_list, reward, new_state, alpha, gamma):
 ############################
 
 
-def init_Tstandard(d, action_list, colors = [0,1,2], init_value = 0): 
+def init_Tstandard(state_value_lists, 
+                   action_list, 
+                   init_value = 0.0): 
     """
     
     Parameters
     ----------
-    d : dimension of grid
-    
-    action_list : a list of possible actions
-    
-    colors : list of color codes
+    state_value_lists : list of lists
+        each sublist corresponds to a dimension of state space
+        elements of each sublist are the possible state values
+        
+        e.g. [[1,2], [1,2], [1,2,3]] reflects a 3-D state space where
+        all combinations in {1,2} x {1,2} x {1,2,3} form the state space
+        
+    action_list : list of possible actions, encoded as integers or tuples
     
     init_value: count to initialize with
   
@@ -166,12 +171,10 @@ def init_Tstandard(d, action_list, colors = [0,1,2], init_value = 0):
     
     
     """
-    inner_S_dict = {((i,j,c)) : init_value for i in range(d) for j in range(d) for c in colors}
-
-
-    T = {((i, j, c), action) : copy.deepcopy(inner_S_dict) for i in range(d) for j in range(d) 
-                for c in colors for action in action_list}
-
+    inner_S_dict = {elem : init_value for elem in itertools.product(*state_value_lists)}    
+    T = {(elem,a):copy.deepcopy(inner_S_dict) 
+     for elem in itertools.product(*state_value_lists) 
+     for a in action_list}
     return(T)    
     
 
