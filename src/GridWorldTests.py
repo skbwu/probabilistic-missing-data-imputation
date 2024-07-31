@@ -8,6 +8,7 @@ import seaborn as sns
 
 import GridWorldHelpers as gwh
 import GridWorldImputers as gwi
+import GridWorldEnvironments as gwe
 
 
 def test_miss_mech():
@@ -81,8 +82,10 @@ def test_actions():
 
 def test_imputers():
     
-    Tstandard = gwi.init_Tstandard(2,[4,5], 0.5)
-    Tmice = gwi.init_Tmice(2,[4,5],0.5)
+    action_list = [(0,0),(0,1)]
+   
+    Tstandard = gwi.init_Tstandard(2, action_list, [4,5], 0.5)
+    Tmice = gwi.init_Tmice(2, action_list, [4,5],0.5)
 
     S = (1,1,4)
     A = (0,1)
@@ -176,9 +179,11 @@ def test_imputers():
  
 def test_Tupdaters():
     
+   
     #set-up
-    Tstandard = gwi.init_Tstandard(2,[4,5], 0)
-    Tmice = gwi.init_Tmice(2,[4,5],0)
+    action_list = [(0,0),(0,1)]
+    Tstandard = gwi.init_Tstandard(2,action_list, [4,5], 0)
+    Tmice = gwi.init_Tmice(2, action_list, [4,5],0)
     true_state = (0,0,4)
     pobs_state = (0, np.nan, 4)
     A = (0,1)
@@ -204,7 +209,7 @@ def test_Tupdaters():
     assert Tstandard[((0,0,4),A)][(0,1,4)] > 0
     assert Tstandard[((0,0,4),A)][(0,0,4)] > 0
     
-    print("Tupdater Tstandard updater passed")
+    print("Tupdater: Tstandard updater passed")
     
     
     #conditional of color, which is 4, given (0, ?)    
@@ -231,20 +236,25 @@ def test_Tupdaters():
     assert Tmice[1][((0,0,4),A, (0,4))][1] > 0
     
    
-    print("Tupdater Tmice updater passed")
+    print("Tupdater: Tmice updater passed")
     
  
 def test_Qupdate():
     
-    Q = gwh.init_Q(3)
+    Q = gwi.init_Q(gwe.get_state_value_lists(3, [0,1,2]),
+                   [(0,0),(0,1)]
+                   )
     alpha = 1; gamma = 1
+    action_list = [(0,0),(0,1)]
     assert Q[(0,0,0),(0,0)] == 0
     assert Q[(1,1,1),(0,0)] == 0
     
-    Q = gwh.update_Q(Q, state = (0,0,0), action = (0,0),
+    Q = gwi.update_Q(Q, state = (0,0,0), action = (0,0),
+                     action_list = action_list,
                  reward = 10, new_state = (1,1,1), 
                  alpha = alpha, gamma = gamma)
-    Q = gwh.update_Q(Q, state = (1,1,1), action = (0,0),
+    Q = gwi.update_Q(Q, state = (1,1,1), action = (0,0),
+                     action_list = action_list,
                  reward = 10, new_state = (0,0,0), 
                  alpha = alpha, gamma = gamma)
     
@@ -252,7 +262,8 @@ def test_Qupdate():
     assert Q[(1,1,1),(0,0)] == 20   #0 + 1[10 + 1*10 - 0]
     
     alpha = .5; gamma = .5
-    Q = gwh.update_Q(Q, state = (0,0,0), action = (0,0),
+    Q = gwi.update_Q(Q, state = (0,0,0), action = (0,0),
+                     action_list = action_list,
                  reward = 10, new_state = (1,1,1), 
                  alpha = alpha, gamma = gamma)
     assert Q[(0,0,0),(0,0)] == 15  #10 + .5[10 + .5*20 - 10]
@@ -272,11 +283,14 @@ def test_miss_pipeline(impute_method):
     K = 10
     num_cycles = 10
     alpha = .5; gamma = .25
+    action_list = [(0,0),(0,1)]
     
     #init stuff
-    Q = gwh.init_Q(d, colors = colors)
-    Tstandard = gwi.init_Tstandard(d,colors, init_T_val)
-    Tmice = gwi.init_Tmice(d,colors,init_T_val)
+    Q = gwi.init_Q(gwe.get_state_value_lists(d, colors),
+                   action_list
+                   )
+    Tstandard = gwi.init_Tstandard(d, action_list, colors, init_T_val)
+    Tmice = gwi.init_Tmice(d, action_list, colors,init_T_val)
     
     #set dummy examples of states, rewards etc
     true_state = (0,0,4)
@@ -307,7 +321,7 @@ def test_miss_pipeline(impute_method):
         
         
     #Update Q matrix
-    Q  = gwi.updateQ_MI(Q, Slist, new_Slist, A, reward, alpha, gamma)
+    Q  = gwi.updateQ_MI(Q, Slist, new_Slist, A, action_list, reward, alpha, gamma)
     
     
     Slist = new_Slist 
@@ -326,12 +340,20 @@ def test_miss_pipeline(impute_method):
  
     
 if __name__ == "__main__":
+    print("--")
     test_miss_mech()
     #test_actions() - produces visuals
+    print("--")
     test_imputers()
+    print("--")
     test_Tupdaters()
+    print("--")
     test_Qupdate()
+    print("--")
     test_miss_pipeline("joint")
+    print("--")
     test_miss_pipeline("mice")
+    print("--")
+ 
     
     
