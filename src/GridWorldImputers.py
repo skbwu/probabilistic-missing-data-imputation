@@ -1,5 +1,6 @@
 import numpy as np
 import copy
+import itertools
 from collections import Counter
 
 import GridWorldHelpers as gwh
@@ -22,32 +23,51 @@ def shuffle(p):
 
 
 # function for initializing our Q matrix as all zeroes, assuming 3 colors
-def init_Q(d, action_list, include_missing_as_state = False, colors = [0,1,2]):
+def init_Q(
+           state_value_lists, 
+           action_list, 
+           include_missing_as_state = False, 
+           missing_as_state_value = -1):
+    """
+    Parameters
+    ----------
+    state_value_lists : list of lists
+        each sublist corresponds to a dimension of state space
+        elements of each sublist are the possible state values
+        
+        e.g. [[1,2], [1,2], [1,2,3]] reflects a 3-D state space where
+        all combinations in {1,2} x {1,2} x {1,2,3} form the state space
+        
+    action_list : list of possible actions, encoded as integers or tuples
 
-    istates = list(range(d))
-    jstates = list(range(d))
-    cstates = colors
+    include_missing_as_state : bool, optional, default False
+        If True, includes 'missing' as a possible state for each
+        dimension of state space. Missing takes value <missing_as_state_value>
+        with default -1.
+        
+    Returns
+    -------
+    Q : dictionary where keys are a tuple representing a possible (s,a) state
+    action pair and values are 0.0. Dictionary contains all state-action pairs
+    as encoded by state_value_lists and action_list
 
+    """
+    Q = {}
     if include_missing_as_state:
-        istates += [-1]
-        jstates += [-1]
-        cstates += [-1]
-
-    # create our Q matrix with missing states too!
-    Q = {((i, j, c), action) : 0.0 
-         for i in istates 
-         for j in jstates
-         for c in cstates 
-         for action in action_list}
-
-    # return our Q matrix
+        state_value_lists = [elem + [missing_as_state_value] for elem 
+                             in state_value_lists]
+        
+    for elem in itertools.product(*state_value_lists):
+        for a in action_list:
+            Q[(elem, a)] = 0.0
     return Q
+
 
 
 def select_action(state, action_list, Q, epsilon):
     """
     Function select actions based on an epsilon greedy policy 
-    (or greedy if psilon = 0), maxixmizing over the Q function formatted
+    (or greedy if psilon = 0), maximizing over the Q function formatted
     as output by init_Q
 
     Parameters
