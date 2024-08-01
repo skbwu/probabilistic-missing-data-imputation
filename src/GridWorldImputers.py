@@ -196,6 +196,7 @@ def sample_entry(dic):
     j = np.random.choice(range(len(options)),1,1,probs)[0]
     return(options[j])
 
+
 def draw_Tstandard(Tstandard,S,A, pobs_state):
     """
     Given transition matrix and current state and action, draw at random a
