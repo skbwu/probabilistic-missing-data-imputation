@@ -6,7 +6,6 @@ from IPython.display import clear_output
 import pickle
 
 import GridWorldEnvironments as gwe # added 7/16/2024
-import GridWorldHelpers as gwh
 import ImputerTools as impt
 
 
@@ -79,11 +78,11 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
     ###############################################################
     
     # load the possible actions list, specifying whether stay in place allowed
-    action_descs = gwh.load_actions(allow_stay_action = allow_stay_action)
+    action_descs = gwe.load_actions(allow_stay_action = allow_stay_action)
     action_list = list(action_descs.keys())
     
     # specify a state_value_list - note order matters #new 7.31.2024
-    state_value_lists = gwh.get_state_value_lists(d, colors)
+    state_value_lists = gwe.get_state_value_lists(d, colors)
     
     # initialize our Q matrix: {((i, j, color), (a1, a2))}
     if impute_method == "missing_state":
@@ -199,7 +198,7 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
         env, env_colors = environments[gwe.get_environment(ce, p_switch, indices)]
 
         # figure out what our new state is, which tells us our reward
-        new_true_state = gwh.true_move(true_state, action, env, env_colors, p_wind_i, p_wind_j)
+        new_true_state = gwe.true_move(true_state, action, env, env_colors, p_wind_i, p_wind_j)
         reward = env[int(new_true_state[0]), int(new_true_state[1])]
         
         # have the option of moving back to start if fall into the river
@@ -220,11 +219,11 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
 
         # simulate our partially-observed mechanism.
         if env_missing == "MCAR":
-            new_pobs_state = gwh.MCAR(new_true_state, thetas)
+            new_pobs_state = gwe.MCAR(new_true_state, thetas)
         elif env_missing == "Mcolor":
-            new_pobs_state = gwh.Mcolor(new_true_state, theta_dict)
+            new_pobs_state = gwe.Mcolor(new_true_state, theta_dict)
         elif env_missing == "Mfog":
-            new_pobs_state = gwh.Mfog(new_true_state, i_range, j_range, thetas_in, thetas_out)
+            new_pobs_state = gwe.Mfog(new_true_state, i_range, j_range, thetas_in, thetas_out)
         else:
             raise Exception("The given env_missing mode is not supported.")
         
