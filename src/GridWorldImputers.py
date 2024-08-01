@@ -277,7 +277,6 @@ def MI(method, Slist, A, pobs_state, shuffle = False,
     but maybe won't have a huge effect since otherwise the 
     Slist is not used going forward
 
-
     """
     assert method in ["joint","mice", "joint-conservative"], "invalid method specified"
     if method == "joint" or method == "joint-conservative":
@@ -326,54 +325,40 @@ def updateQ_MI(Q, Slist, new_Slist, A, action_list, reward, alpha, gamma):
 # MICE approach that doesn't use joint info but is lower dimensional
 ########################################################################33
 
-def init_Tmice(d, action_list, colors = [0,1,2], init_value = 0):
+def init_Tmice(state_value_lists, action_list,  init_value = 0):
     """
-
     Parameters
     ----------
-    d : dimension of grid
-    
-    action_list : a list of possible actions
-    
-    colors : list of color codes
+    state_value_lists : list of lists
+        each sublist corresponds to a dimension of state space
+        elements of each sublist are the possible state values
+        
+        e.g. [[1,2], [1,2], [1,2,3]] reflects a 3-D state space where
+        all combinations in {1,2} x {1,2} x {1,2,3} form the state space
+        
+    action_list : list of possible actions, encoded as integers or tuples
     
     init_value: count to initialize with
-    
+
     Returns
     -------
-    dict with keys 0,1,2 where
-    
-    
-    0 stands for y coordinate and value is:
-           
-        dict where keys are tuples of the form ((y,x,c),(a1,a2),(y,c))
-        and values are dictionaries with keys 0,...,d-1 for each of the possible
-        values of x
-        
-    1 stands for "y" value.
-        
-        it is same as above only keys are tuples of form ((y,x,c),(a1,a2),(x,c))
-    
-    2 stands for "c" value
-        
-        it is same as above only keys are tuples of form ((y,x,c),(a1,a2),(y,x))
-
-
-    Note: the raeson (y,x) are not the typical (x,y) order is because of how Numpy does
-    (row,column) indexing 
-
+    dict with a key for each element of state_value_lists. 
+    values of that dict are dictionaries with all combos of (s,a,s') 
+    excluding the dimension of s' that this outer key is for                                                       
     """ 
-    x_dict = {((i, j, c), action, (u,v)) :  {i: init_value for i in range(d)} for i in range(d) for j in range(d) 
-                for c in colors for action in action_list for u in range(d) for v in colors}
+    T = {}
+    for i, dim in enumerate(state_value_lists):
 
-    y_dict = x_dict.copy() #same structure 
-    
-    c_dict = {((i, j, c), action, (u,v)) :  {c: init_value for c in colors} for i in range(d) for j in range(d) 
-                for c in colors for action in action_list for u in range(d) for v in range(d)}
+        sub_list = state_value_lists[:i] + state_value_lists[i+1:]
+        target = state_value_lists[i]
+        sub_dict = {(elem,a,elem2) : {e:0 for e in target}
+                    for elem in itertools.product(*state_value_lists)
+                    for a in action_list
+                    for elem2 in itertools.product(*sub_list) 
+                   }
+        T[i] = sub_dict
 
-    return {0:y_dict,
-            1:x_dict, 
-            2:c_dict}
+    return(T)
 
 
 def draw_Tmice(Tmice, S, A, focal, Scomplete = None):
