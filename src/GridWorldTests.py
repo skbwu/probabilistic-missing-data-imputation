@@ -274,6 +274,85 @@ def test_Qupdate():
     print("Basic update Q test passed")
 
 
+def test_select_action():
+    
+    d = 2
+    state_value_lists = [list(range(d)),
+                      list(range(d)),
+                      [3,4]]
+
+    action_list = [(0,0), (1,1)]
+    
+    # (1,1) should win
+    Q = impt.init_Q(state_value_lists, action_list, True)
+    Q[((0,0,3),(1,1))] = 46
+    Q[((0,0,4),(1,1))] = 6
+    Q[((0,0,3),(0,0))] = 45
+    Q[((0,0,4),(0,0))] = 5
+    
+    action = impt.select_action((0,0,3), action_list, Q, epsilon = 0)
+    assert action == (1,1)
+   
+    # (0,0) should win
+    for o in ["voting1", "voting2", "averaging"]:
+        action = impt.select_action([(0,0,3),(0,0,4)], action_list, Q, epsilon = 0, option = o)
+        assert action == (1,1)
+
+
+    Q[((0,0,3),(1,1))] = 20
+    Q[((0,0,4),(1,1))] = 20
+    Q[((0,0,3),(0,0))] = 40
+    Q[((0,0,4),(0,0))] = 50
+    for o in ["voting1", "voting2", "averaging"]:
+        action = impt.select_action([(0,0,3),(0,0,4)], action_list, Q, epsilon = 0, option = o)
+        assert action == (0,0)
+   
+   
+    # some methods have random tie breaking and some don't
+    Q[((0,0,3),(1,1))] = 50
+    Q[((0,0,4),(1,1))] = 10
+    Q[((0,0,3),(0,0))] = 10
+    Q[((0,0,4),(0,0))] = 20
+    count = 0
+    for i in range(200):
+        action = impt.select_action([(0,0,3),(0,0,4)], action_list, Q, epsilon = 0, option = "voting1")
+        if action == (1,1):
+            count += 1
+    assert count > 10  and count < 190, "test1"
+    count = 0
+    for i in range(100):
+        action = impt.select_action([(0,0,3),(0,0,4)], action_list, Q, epsilon = 0, option = "voting2")
+        if action == (1,1):
+            count += 1
+    assert count > 10 and count < 190, "test2"
+    
+    action = impt.select_action([(0,0,3),(0,0,4)], action_list, Q, epsilon = 0,
+                                option = "averaging")
+    assert action == (1,1)
+    
+    
+    
+    # all random tie breaking
+    Q[((0,0,3),(1,1))] = 20
+    Q[((0,0,4),(1,1))] = 20
+    Q[((0,0,3),(0,0))] = 20
+    Q[((0,0,4),(0,0))] = 20
+    
+    for o in ["voting1", "voting2", "averaging"]:
+        count = 0
+        for i in range(200):
+            action = impt.select_action((0,0,3), action_list, Q, epsilon = 0, option = o)
+            if action == (1,1):
+                count += 1
+        assert count > 10 and count < 190
+            
+    
+    print("Basic select_action tests passed")
+    
+    
+
+
+
 def test_miss_pipeline(impute_method):
     """
     A dummy run of pipeline
@@ -336,6 +415,8 @@ def test_miss_pipeline(impute_method):
     print(f"A dummy example of the MI pipeline ran without error for imp method {impute_method}")
           
       
+        
+      
 
 
 
@@ -356,6 +437,8 @@ if __name__ == "__main__":
     test_Tupdaters()
     print("--")
     test_Qupdate()
+    print("--")
+    test_select_action()
     print("--")
     test_miss_pipeline("joint")
     print("--")
