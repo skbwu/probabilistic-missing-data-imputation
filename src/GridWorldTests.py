@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 import GridWorldHelpers as gwh
-import GridWorldImputers as gwi
+import ImputerTools as impt
 import GridWorldEnvironments as gwe
 
 
@@ -84,25 +84,25 @@ def test_imputers():
     
     action_list = [(0,0),(0,1)]
    
-    Tstandard = gwi.init_Tstandard(gwe.get_state_value_lists(2, [4,5]),
+    Tstandard = impt.init_Tstandard(gwe.get_state_value_lists(2, [4,5]),
                                    action_list,  0.5)
-    Tmice = gwi.init_Tmice(2, action_list, [4,5],0.5)
+    Tmice = impt.init_Tmice(2, action_list, [4,5],0.5)
 
     S = (1,1,4)
     A = (0,1)
     
     #Make sure that if nothing missing, recovers original state
     pobs_state = (1,1,4)
-    out = gwi.draw_mouse(Tmice, S, A, pobs_state = pobs_state, num_cycles = 3)
+    out = impt.draw_mouse(Tmice, S, A, pobs_state = pobs_state, num_cycles = 3)
     assert out == pobs_state
-    out = gwi.draw_Tstandard(Tstandard,S, A, pobs_state)
+    out = impt.draw_Tstandard(Tstandard,S, A, pobs_state)
     assert out == pobs_state 
 
     #Probabilistic Tests that are very unlikely to fail though it is possible
     count = 0
     pobs_state = (1,np.nan,np.nan)
     for i in range(100):
-        out = gwi.draw_Tstandard(Tstandard,S, A, pobs_state)
+        out = impt.draw_Tstandard(Tstandard,S, A, pobs_state)
         assert out[0] == pobs_state[0]
         if out[1] != pobs_state[1]:
             count += 1
@@ -111,7 +111,7 @@ def test_imputers():
     count = 0
     pobs_state = (1,np.nan,np.nan)
     for i in range(100):
-        out = gwi.draw_mouse(Tmice, S, A, pobs_state = pobs_state, num_cycles = 3)
+        out = impt.draw_mouse(Tmice, S, A, pobs_state = pobs_state, num_cycles = 3)
         assert out[0] == pobs_state[0]
         if out[1] != pobs_state[1]:
             count += 1
@@ -122,7 +122,7 @@ def test_imputers():
     count = 0
     pobs_state = (1,np.nan,np.nan)
     for i in range(100):
-        out = gwi.draw_Tstandard(Tstandard,S, A, pobs_state)
+        out = impt.draw_Tstandard(Tstandard,S, A, pobs_state)
         assert out[0] == pobs_state[0]
         if out == (1,0,4):
             count += 1
@@ -133,7 +133,7 @@ def test_imputers():
     count = 0
     pobs_state = (1,0,np.nan)
     for i in range(100):
-        out = gwi.draw_mouse(Tmice, S, A, pobs_state = pobs_state, num_cycles = 3)
+        out = impt.draw_mouse(Tmice, S, A, pobs_state = pobs_state, num_cycles = 3)
         assert out[0] == pobs_state[0]
         assert out[1] == pobs_state[1]
         if out == (1,0,5):
@@ -146,7 +146,7 @@ def test_imputers():
     S = (0,0,4)
     pobs_state = (1,0,np.nan)
     for i in range(100):
-        out = gwi.draw_mouse(Tmice, S, A, pobs_state = pobs_state, num_cycles = 3)
+        out = impt.draw_mouse(Tmice, S, A, pobs_state = pobs_state, num_cycles = 3)
         assert out[0] == pobs_state[0]
         assert out[1] == pobs_state[1]
         if out == (1,0,5):
@@ -156,7 +156,7 @@ def test_imputers():
     count = 0
     pobs_state = (1,0,np.nan)
     for i in range(100):
-        out = gwi.draw_Tstandard(Tstandard,S, A, pobs_state)
+        out = impt.draw_Tstandard(Tstandard,S, A, pobs_state)
         assert out[0] == pobs_state[0]
         assert out[1] == pobs_state[1]
         if out == (1,0,4):
@@ -170,7 +170,7 @@ def test_imputers():
     Tstandard[(S,A)][(1,0,5)] = 1 #make this dominate a little
     pobs_state = (np.nan,np.nan,np.nan)
     for i in range(100):
-        out = gwi.draw_mouse(Tmice, S, A, pobs_state = pobs_state, num_cycles = 3)
+        out = impt.draw_mouse(Tmice, S, A, pobs_state = pobs_state, num_cycles = 3)
         if out == (1,0,5):
             count += 1
     assert count < 95 and count > 5
@@ -183,9 +183,9 @@ def test_Tupdaters():
    
     #set-up
     action_list = [(0,0),(0,1)]
-    Tstandard = gwi.init_Tstandard(gwe.get_state_value_lists(2,[4,5]),
+    Tstandard = impt.init_Tstandard(gwe.get_state_value_lists(2,[4,5]),
                                    action_list, 0)
-    Tmice = gwi.init_Tmice(2, action_list, [4,5],0)
+    Tmice = impt.init_Tmice(2, action_list, [4,5],0)
     true_state = (0,0,4)
     pobs_state = (0, np.nan, 4)
     A = (0,1)
@@ -193,7 +193,7 @@ def test_Tupdaters():
     #get vector of S' imputations based on S vector and A
     K = 10
     Slist = [true_state] * K
-    new_Slist = gwi.MI(method = "joint",
+    new_Slist = impt.MI(method = "joint",
            Slist = Slist,
            A = A,
            pobs_state = pobs_state,
@@ -204,7 +204,7 @@ def test_Tupdaters():
     assert Tstandard[((0,0,4),A)][(0,0,4)] == 0
     assert Tstandard[((0,1,4),A)][(0,0,4)] == 0
     
-    gwi.Tstandard_update(Tstandard, Slist, A, new_Slist)
+    impt.Tstandard_update(Tstandard, Slist, A, new_Slist)
     
     assert Tstandard[((0,1,4),A)][(0,0,4)] == 0
     #these should hold with very high probability
@@ -224,7 +224,7 @@ def test_Tupdaters():
     assert Tmice[1][((0,0,4),A, (0,4))][0] == 0
     assert Tmice[1][((0,0,4),A, (0,4))][1] == 0
     
-    gwi.Tmice_update(Tmice, Slist, A, new_Slist)
+    impt.Tmice_update(Tmice, Slist, A, new_Slist)
     
     #conditional of color, which is 4, given (0, ?)    
     assert Tmice[2][((0,0,4),A, (1,0))][4] == 0
@@ -243,7 +243,7 @@ def test_Tupdaters():
  
 def test_Qupdate():
     
-    Q = gwi.init_Q(gwe.get_state_value_lists(3, [0,1,2]),
+    Q = impt.init_Q(gwe.get_state_value_lists(3, [0,1,2]),
                    [(0,0),(0,1)]
                    )
     alpha = 1; gamma = 1
@@ -251,11 +251,11 @@ def test_Qupdate():
     assert Q[(0,0,0),(0,0)] == 0
     assert Q[(1,1,1),(0,0)] == 0
     
-    Q = gwi.update_Q(Q, state = (0,0,0), action = (0,0),
+    Q = impt.update_Q(Q, state = (0,0,0), action = (0,0),
                      action_list = action_list,
                  reward = 10, new_state = (1,1,1), 
                  alpha = alpha, gamma = gamma)
-    Q = gwi.update_Q(Q, state = (1,1,1), action = (0,0),
+    Q = impt.update_Q(Q, state = (1,1,1), action = (0,0),
                      action_list = action_list,
                  reward = 10, new_state = (0,0,0), 
                  alpha = alpha, gamma = gamma)
@@ -264,7 +264,7 @@ def test_Qupdate():
     assert Q[(1,1,1),(0,0)] == 20   #0 + 1[10 + 1*10 - 0]
     
     alpha = .5; gamma = .5
-    Q = gwi.update_Q(Q, state = (0,0,0), action = (0,0),
+    Q = impt.update_Q(Q, state = (0,0,0), action = (0,0),
                      action_list = action_list,
                  reward = 10, new_state = (1,1,1), 
                  alpha = alpha, gamma = gamma)
@@ -288,13 +288,13 @@ def test_miss_pipeline(impute_method):
     action_list = [(0,0),(0,1)]
     
     #init stuff
-    Q = gwi.init_Q(gwe.get_state_value_lists(d, colors),
+    Q = impt.init_Q(gwe.get_state_value_lists(d, colors),
                    action_list
                    )
-    Tstandard = gwi.init_Tstandard(gwe.get_state_value_lists(d, colors),
+    Tstandard = impt.init_Tstandard(gwe.get_state_value_lists(d, colors),
                                    action_list,
                                    init_T_val)
-    Tmice = gwi.init_Tmice(d, action_list, colors,init_T_val)
+    Tmice = impt.init_Tmice(d, action_list, colors,init_T_val)
     
     #set dummy examples of states, rewards etc
     true_state = (0,0,4)
@@ -305,10 +305,10 @@ def test_miss_pipeline(impute_method):
     pobs_state = (0, np.nan, np.nan)
 
     # draw whether to shuffle - won't matter here though
-    shuffle = gwi.shuffle(p_shuffle)
+    shuffle = impt.shuffle(p_shuffle)
     
     #get new state vector
-    new_Slist = gwi.MI(method = impute_method,
+    new_Slist = impt.MI(method = impute_method,
        Slist = Slist,
        A = A,
        pobs_state = pobs_state,
@@ -319,13 +319,13 @@ def test_miss_pipeline(impute_method):
     
     #Update T matrix 
     if impute_method == "mice":
-        gwi.Tmice_update(Tmice, Slist, A, new_Slist)
+        impt.Tmice_update(Tmice, Slist, A, new_Slist)
     if impute_method == "joint":
-        gwi.Tstandard_update(Tstandard, Slist, A, new_Slist)
+        impt.Tstandard_update(Tstandard, Slist, A, new_Slist)
         
         
     #Update Q matrix
-    Q  = gwi.updateQ_MI(Q, Slist, new_Slist, A, action_list, reward, alpha, gamma)
+    Q  = impt.updateQ_MI(Q, Slist, new_Slist, A, action_list, reward, alpha, gamma)
     
     
     Slist = new_Slist 
