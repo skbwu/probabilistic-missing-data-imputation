@@ -1,5 +1,5 @@
 # Missing Data Multiple Imputation for Tabular Q-Learning in Online RL
-This repo accompanies the paper "Missing Data Multiple Imputation for Tabular Q-Learning in Online RL" written for Susan Murphy's [Stat 234](https://people.seas.harvard.edu/~samurphy/teaching/stat234spring2024/syllabus.htm)  class on reinforcement learning at Harvard in Spring 2024.
+This repo accompanies the paper "Missing Data Multiple Imputation for Tabular Q-Learning in Online RL" written for Susan Murphy's [Stat 234](https://people.seas.harvard.edu/~samurphy/teaching/stat234spring2024/syllabus.htm)  class on reinforcement learning at Harvard in Spring 2024 by Kyla Chasalow and Skyler Wu.
 
 Within the `src` directory:
 
