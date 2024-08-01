@@ -19,7 +19,7 @@ def shuffle(p):
 ######################################
 
 
-# function for initializing our Q matrix as all zeroes, assuming 3 colors
+# function for initializing our Q matrix as all zeroes
 def init_Q(
            state_value_lists, 
            action_list, 
@@ -181,28 +181,23 @@ def init_Tstandard(state_value_lists,
     
     Returns
     -------
-    Tstandard: a dict where keys are (S_t,A_t) aka tuples of the form ((y,x,c),(a1,a2))
-    and values are dictionaries with keys formed by (S_{t+1}) aka tuples of the form
-    (y,x,c)
+    Tstandard: a dict where keys are (S_t,A_t) and
+    values are dictionaries with keys formed by (S_{t+1})
     
     Example:
         
         Tstandard[((1,1,1),(0,1))][(0,0,0)]
         
-        accesses the count for times was at (1,1) on the grid with color 1, 
-        took action "up" (0,1) and ended up at (0,0,0)
+        accesses the count for times was at (1,1,1), took action (0,1), and ended up
+        at (0,0,0)
         
-        *Note that in practice many transitions are impossible and should stay at 0
+        *Note that in practice some transitions may be impossible and should stay at 0
         but we initialize with all possibilities so that this matrix is (a) not world
         specific and (b) to reflect that we do not actually give the agent this logical
-        information
-    
-    
-    #TODO: think about consequences of how initialize this -- if do all to 0, then good
-    because those that are truly 0 will stay 0 but bad because will never impute a transition
-    until have observed it at least once. Maybe you want to initilize this to \epsilon?
-    
-    
+        information    
+        
+        If you know that all transitions are in principle possible, you may want to pick
+        init_value = \eta > 0 rather than the default of 0.        
     """
     inner_S_dict = {elem : init_value for elem in itertools.product(*state_value_lists)}    
     T = {(elem,a):copy.deepcopy(inner_S_dict) 
