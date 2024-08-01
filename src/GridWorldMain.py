@@ -23,7 +23,7 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
            thetas_out, # np.array, Mfog, out: (0.0, 0.0, 0.0) + (0.1, 0.1, 0.1)
            theta_dict, # dict with keys {0, 1, 2} corresponding to a np.array each.
            impute_method, # "last_fobs", "random_action", "missing_state", "joint", "mice"
-           action_option, # TODO: NEW July 31, 2024
+           action_option, # voting1, voting2, averaging
            K, #number of multiple imputation chains
            p_shuffle, #shuffle rate for chains
            num_cycles, #number of cycles used in Mice
@@ -35,10 +35,8 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
            verbose=False, # intermediate outputs or nah?
            river_restart=False): # option to force agent back to starting point if fall into river. 7/16/2024. 
     
-    # checks
-    assert action_option in ["voting1","voting2","averaging"] #see select_action() for documentation
-    
 
+    
     # for better referencing later (7/16/2024).
     baseline_penalty = -1
     water_penalty = -10
