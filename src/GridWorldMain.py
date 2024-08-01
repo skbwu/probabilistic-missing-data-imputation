@@ -268,8 +268,8 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
                 #get here when already have defined action variable 
                 new_imp_state_list = impt.MI(
                        method = impute_method,
-                       Slist = imp_state_list,
-                       A = action, #previous action?
+                       last_state_list = imp_state_list,
+                       last_A = action, 
                        pobs_state = new_pobs_state,
                        shuffle = shuffle,
                        Tmice = Tmice,

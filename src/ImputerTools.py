@@ -295,16 +295,16 @@ def Tstandard_update(Tstandard, Slist, A, new_Slist):
 #########################################################
 
 
-def MI(method, Slist, A, pobs_state, shuffle = False,
+def MI(method, last_state_list, last_A, pobs_state, shuffle = False,
                  Tstandard = None, Tmice = None, num_cycles = None):
     """
-    Given K = len(Slist) imputations previous step, for each draw a new
-    imputation using draw_Tstandard() or draw_mouse()
+    Given K = len(last_state_list) imputations from previous step and the previous action,
+    for each draw a new imputation using draw_Tstandard() or draw_mouse()
     
     Optionally randomly reshuffle the order. This will have the
     effect of mixing the chains in terms of how the Q gets updated
     but maybe won't have a huge effect since otherwise the 
-    Slist is not used going forward
+    last_state_list is not used going forward
 
     """
     assert method in ["joint","mice", "joint-conservative"], "invalid method specified"
@@ -313,19 +313,19 @@ def MI(method, Slist, A, pobs_state, shuffle = False,
     if method == "mice":
         assert Tmice is not None and num_cycles is not None
     
-    K = len(Slist)
-    NewSlist = [0]*K
+    K = len(last_state_list)
+    new_state_list = [0]*K
     for i in range(K):
         if method == "joint" or method == "joint-conservative":
-            NewSlist[i] = draw_Tstandard(Tstandard,Slist[i],A, pobs_state)
+            new_state_list[i] = draw_Tstandard(Tstandard,last_state_list[i], last_A, pobs_state)
         if method == "mice":
-            NewSlist[i] = draw_mouse(Tmice, Slist[i], A, pobs_state, num_cycles = num_cycles)
+            new_state_list[i] = draw_mouse(Tmice, last_state_list[i], last_A, pobs_state, num_cycles = num_cycles)
                 
     if shuffle:
-        np.random.shuffle(NewSlist) #modifies in place
+        np.random.shuffle(new_state_list) #modifies in place
         
 
-    return(NewSlist)
+    return(new_state_list)
        
 #######################################
 # Q update in MI case
