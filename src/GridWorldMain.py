@@ -1,3 +1,7 @@
+""" 
+This script contains the main functions for running the grid world environment and
+the missing data methods on them
+"""
 import numpy as np
 import pandas as pd
 import sys, copy, os, shutil
@@ -19,6 +23,7 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
            thetas_out, # np.array, Mfog, out: (0.0, 0.0, 0.0) + (0.1, 0.1, 0.1)
            theta_dict, # dict with keys {0, 1, 2} corresponding to a np.array each.
            impute_method, # "last_fobs", "random_action", "missing_state", "joint", "mice"
+           action_option, # TODO: NEW July 31, 2024
            K, #number of multiple imputation chains
            p_shuffle, #shuffle rate for chains
            num_cycles, #number of cycles used in Mice
@@ -30,6 +35,10 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
            verbose=False, # intermediate outputs or nah?
            river_restart=False): # option to force agent back to starting point if fall into river. 7/16/2024. 
     
+    # checks
+    assert action_option in ["voting1","voting2","averaging"] #see select_action() for documentation
+    
+
     # for better referencing later (7/16/2024).
     baseline_penalty = -1
     water_penalty = -10
@@ -174,10 +183,9 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
                 pobs_state_temp = tuple([val if ~np.isnan(val) else -1 for val in pobs_state])
                 action = impt.select_action(pobs_state_temp, action_list, Q, epsilon)
             elif impute_method in MImethods:
-                
-                # vote on action. note: not taking most-selected action because suspect not enough exploration
-                action_options = [impt.select_action(s, action_list, Q, epsilon) for s in imp_state_list]
-                action = action_options[np.random.choice(len(action_options))]                   
+                action = impt.select_action(state = imp_state_list, 
+                              action_list = action_list,
+                              Q = Q, epsilon = epsilon, option = action_option)
             else:
                 raise Exception("impute_method choice is not currently supported.")
         

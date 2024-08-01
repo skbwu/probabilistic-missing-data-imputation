@@ -3,9 +3,6 @@ import copy
 import itertools
 from collections import Counter
 
-import GridWorldHelpers as gwh
-
-
 
 ############################
 # Little Helpers
@@ -64,7 +61,7 @@ def init_Q(
 
 
 
-def select_action(state, action_list, Q, epsilon):
+def select_action(state, action_list, Q, epsilon, option = "voting2"):
     """
     Function select actions based on an epsilon greedy policy 
     (or greedy if psilon = 0), maximizing over the Q function formatted
@@ -72,11 +69,27 @@ def select_action(state, action_list, Q, epsilon):
 
     Parameters
     ----------
-    state : tuple encoding state to select action for
+    state : EITHER 
+        - option 1: tuple encoding state to select action for
+        - option 2: list of states from multiple imputation to incorporate into
+                    action selection procedure
 
     Q : Q matrix
 
     epsilon : int or float >= 0
+    
+    option : if state is of type typle, this is ignored. If state if of type 
+             list, then two options
+             
+             (1) voting1 - get the Q-maximizing action for each state and then 
+                 pick the most voted action, breaking ties at random
+                 
+             (2) voting2 - get the Q-maximizing action for each state and then 
+                 pick among them at random
+                 
+            (3) averaging - for each action, calculate the mean Q function over
+                states and then take the action with maximum mean Q
+                 
 
     Returns
     -------
@@ -84,16 +97,36 @@ def select_action(state, action_list, Q, epsilon):
     """
     assert epsilon >= 0
     
-    # get Q values for that state-action 
-    Qvals = [Q[(state, a)] for a in action_list]
+    if type(state) is tuple:
+        # get Q value for each action for that state
+        Qvals = [Q[(state, a)] for a in action_list]
+        # get where the max Q values are
+        max_indices = np.where(Qvals == np.max(Qvals))[0]
         
-    # get where the max Q values are
-    max_indices = np.where(Qvals == np.max(Qvals))[0]
-    # what is the "greedy" action index?
-    # break ties by randomly selecting one
+        
+    if type(state) is list:
+        
+        if "voting" in option:
+            # get Q value for each action for each state 
+            Qvals = [[Q[(s, a)] for a in action_list] for s in state]
+            # get where max Q values are for each state, breaking ties randomly
+            maxes = [np.where(v == np.max(v))[0] for v  in Qvals]
+            maxes = [v[np.random.choice(len(v))] for v in maxes] 
+            if option == "voting1":
+                counts = Counter(maxes)
+                max_count = counts.most_common(1)[0][1] #what is highest count?
+                greedy_idx = [elem for elem, count in counts.items() if count == max_count]
+            if option == "voting2": 
+                greedy_idx = maxes[np.random.choice(len(maxes))]             
+          
+        if option == "averaging":    
+            action_means = [np.mean([Q[(s,a)] for s in state]) for a in action_list]
+            max_indices = np.where(action_means == np.max(action_means))[0]
+        
+    # what is the "greedy" action index? break ties by randomly selecting one
     greedy_idx = max_indices[np.random.choice(len(max_indices))]
 
-    # let's actually pick our action index based on epsilon greedy
+    # actually pick our action index based on epsilon greedy
     action_idx = greedy_idx if np.random.uniform() > epsilon else np.random.choice(len(action_list))
 
     # return our action
