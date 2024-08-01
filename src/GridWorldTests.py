@@ -86,7 +86,8 @@ def test_imputers():
    
     Tstandard = impt.init_Tstandard(gwe.get_state_value_lists(2, [4,5]),
                                    action_list,  0.5)
-    Tmice = impt.init_Tmice(2, action_list, [4,5],0.5)
+    Tmice = impt.init_Tmice(gwe.get_state_value_lists(2, [4,5]),
+                                   action_list)
 
     S = (1,1,4)
     A = (0,1)
@@ -185,7 +186,8 @@ def test_Tupdaters():
     action_list = [(0,0),(0,1)]
     Tstandard = impt.init_Tstandard(gwe.get_state_value_lists(2,[4,5]),
                                    action_list, 0)
-    Tmice = impt.init_Tmice(2, action_list, [4,5],0)
+    Tmice = impt.init_Tmice(gwe.get_state_value_lists(2,[4,5]),
+                                   action_list, 0)
     true_state = (0,0,4)
     pobs_state = (0, np.nan, 4)
     A = (0,1)
@@ -294,7 +296,9 @@ def test_miss_pipeline(impute_method):
     Tstandard = impt.init_Tstandard(gwe.get_state_value_lists(d, colors),
                                    action_list,
                                    init_T_val)
-    Tmice = impt.init_Tmice(d, action_list, colors,init_T_val)
+    Tmice = impt.init_Tmice(gwe.get_state_value_lists(d, colors),
+                                   action_list,
+                                   init_T_val)
     
     #set dummy examples of states, rewards etc
     true_state = (0,0,4)
