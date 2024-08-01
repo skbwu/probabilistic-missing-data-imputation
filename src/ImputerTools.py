@@ -115,14 +115,14 @@ def select_action(state, action_list, Q, epsilon, option = "voting2"):
             if option == "voting1":
                 counts = Counter(maxes)
                 max_count = counts.most_common(1)[0][1] #what is highest count?
-                greedy_idx = [elem for elem, count in counts.items() if count == max_count]
+                max_indices = [elem for elem, count in counts.items() if count == max_count]
             if option == "voting2": 
-                greedy_idx = maxes[np.random.choice(len(maxes))]             
+                max_indices = maxes 
           
         if option == "averaging":    
             action_means = [np.mean([Q[(s,a)] for s in state]) for a in action_list]
             max_indices = np.where(action_means == np.max(action_means))[0]
-        
+    
     # what is the "greedy" action index? break ties by randomly selecting one
     greedy_idx = max_indices[np.random.choice(len(max_indices))]
 
