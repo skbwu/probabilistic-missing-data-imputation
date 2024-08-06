@@ -82,8 +82,7 @@ def get_imputation(impute_method : str,
     return new_imp_state, new_imp_state_list
 
 
-def get_action(pobs_state : tuple,
-               last_fobs_state : tuple,
+def get_action(imp_state : tuple, 
                last_imp_state_list : list,
                impute_method : str,
                action_list : list, 
@@ -91,37 +90,51 @@ def get_action(pobs_state : tuple,
                epsilon : float,
                action_option : str,
                missing_as_state_value = -1):
-    
-    # do we have any missing state values?
-    if np.any(np.isnan(pobs_state)):
-        
-        # deal with it accordingly to get imputed actions
-        if impute_method == "last_fobs1":
-            action = impt.select_action(last_fobs_state, action_list, Q, epsilon) #TODO: fix
-            
-        elif impute_method == "last_fobs2":
-            action = impt.select_action(last_fobs_state, action_list, Q, epsilon) #TODO: fix
-            
-        elif impute_method == "random_action":
+    """
+    #TODO!!!!!
+
+    Parameters
+    ----------
+    imp_state : tuple
+        DESCRIPTION.
+    last_imp_state_list : list
+        DESCRIPTION.
+    impute_method : str
+        DESCRIPTION.
+    action_list : list
+        DESCRIPTION.
+    Q : dict
+        DESCRIPTION.
+    epsilon : float
+        DESCRIPTION.
+    action_option : str
+        DESCRIPTION.
+    missing_as_state_value : TYPE, optional
+        DESCRIPTION. The default is -1.
+
+    Raises
+    ------
+    Exception
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+    if impute_method == "random_action":
             action = action_list[np.random.choice(a=len(action_list))]
-            
-        elif impute_method == "missing_state":
-            # for this method only, we need to convert np.nan to -1
-            pobs_state_temp = tuple([val if ~np.isnan(val) else missing_as_state_value for val in pobs_state])
-            action = impt.select_action(pobs_state_temp, action_list, Q, epsilon)
-            
-        elif impute_method in MImethods:
+                      
+    elif impute_method in MImethods:
             action = impt.select_action(state = last_imp_state_list, 
                           action_list = action_list,
                           Q = Q, 
                           epsilon = epsilon, 
                           option = action_option)
-        else:
-            raise Exception("impute_method choice is not currently supported.")
-    
-    # if no missingness, select an action by standard epsilon greedy 
     else:
-        action = impt.select_action(pobs_state, action_list, Q, epsilon)
+        #for missing_state, get_imputation will already have converted np.nan to whatever 
+        #filler value is being used and Q will already have incorporated that value
+        action = impt.select_action(imp_state, action_list, Q, epsilon)
         
     return(action)
     
