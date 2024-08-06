@@ -82,7 +82,7 @@ def get_imputation(impute_method : str,
     return new_imp_state, new_imp_state_list
 
 
-def get_action(imp_state : tuple, 
+def get_action(last_imp_state : tuple, 
                last_imp_state_list : list,
                impute_method : str,
                action_list : list, 
@@ -92,7 +92,7 @@ def get_action(imp_state : tuple,
     """
     Parameters
     ----------
-    imp_state : tuple
+    last_imp_state : tuple
         the state that should be used to determine the action
         if this argument is None, that means impute_method must be "random_action"
         and a random action is taken
@@ -123,7 +123,7 @@ def get_action(imp_state : tuple,
     An element of action_list representing next action to take
 
     """
-    if impute_method == "random_action" and imp_state is None:
+    if impute_method == "random_action" and last_imp_state is None:
         action = action_list[np.random.choice(a=len(action_list))]
                       
     elif impute_method in MImethods:
@@ -135,7 +135,7 @@ def get_action(imp_state : tuple,
     else:
         #for missing_state, get_imputation will already have converted np.nan to whatever 
         #filler value is being used and Q will already have incorporated that value
-        action = impt.select_action(imp_state, action_list, Q, epsilon)
+        action = impt.select_action(last_imp_state, action_list, Q, epsilon)
         
     return(action)
     
