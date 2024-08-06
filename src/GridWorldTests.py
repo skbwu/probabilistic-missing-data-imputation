@@ -8,6 +8,7 @@ import seaborn as sns
 
 import ImputerTools as impt
 import GridWorldEnvironments as gwe
+import RLTools as rlt
 
 
 def test_miss_mech():
@@ -189,54 +190,54 @@ def test_Tupdaters():
                                    action_list, 0)
     true_state = (0,0,4)
     pobs_state = (0, np.nan, 4)
-    A = (0,1)
+    last_A = (0,1)
     
     #get vector of S' imputations based on S vector and A
     K = 10
-    Slist = [true_state] * K
-    new_Slist = impt.MI(method = "joint",
-           Slist = Slist,
-           A = A,
+    last_state_list = [true_state] * K
+    new_last_state_list = impt.MI(method = "joint",
+           last_state_list = last_state_list,
+           last_A = last_A,
            pobs_state = pobs_state,
            shuffle = False,
            Tstandard = Tstandard)
 
-    assert Tstandard[((0,0,4),A)][(0,0,4)] == 0
-    assert Tstandard[((0,0,4),A)][(0,0,4)] == 0
-    assert Tstandard[((0,1,4),A)][(0,0,4)] == 0
+    assert Tstandard[((0,0,4),last_A)][(0,0,4)] == 0
+    assert Tstandard[((0,0,4),last_A)][(0,0,4)] == 0
+    assert Tstandard[((0,1,4),last_A)][(0,0,4)] == 0
     
-    impt.Tstandard_update(Tstandard, Slist, A, new_Slist)
+    impt.Tstandard_update(Tstandard, last_state_list, last_A, new_last_state_list)
     
-    assert Tstandard[((0,1,4),A)][(0,0,4)] == 0
+    assert Tstandard[((0,1,4),last_A)][(0,0,4)] == 0
     #these should hold with very high probability
-    assert Tstandard[((0,0,4),A)][(0,1,4)] > 0
-    assert Tstandard[((0,0,4),A)][(0,0,4)] > 0
+    assert Tstandard[((0,0,4),last_A)][(0,1,4)] > 0
+    assert Tstandard[((0,0,4),last_A)][(0,0,4)] > 0
     
     print("Tupdater: Tstandard updater passed")
     
     
     #conditional of color, which is 4, given (0, ?)    
-    assert Tmice[2][((0,0,4),A, (1,0))][4] == 0
-    assert Tmice[2][((0,0,4),A, (0,0))][4] == 0
-    assert Tmice[2][((0,0,4),A, (0,1))][4] == 0
+    assert Tmice[2][((0,0,4),last_A, (1,0))][4] == 0
+    assert Tmice[2][((0,0,4),last_A, (0,0))][4] == 0
+    assert Tmice[2][((0,0,4),last_A, (0,1))][4] == 0
 
     #conditional of x coordinate, which is ?, given (0, 4)    
-    assert Tmice[1][((0,0,4),A, (0,5))][1] == 0
-    assert Tmice[1][((0,0,4),A, (0,4))][0] == 0
-    assert Tmice[1][((0,0,4),A, (0,4))][1] == 0
+    assert Tmice[1][((0,0,4),last_A, (0,5))][1] == 0
+    assert Tmice[1][((0,0,4),last_A, (0,4))][0] == 0
+    assert Tmice[1][((0,0,4),last_A, (0,4))][1] == 0
     
-    impt.Tmice_update(Tmice, Slist, A, new_Slist)
+    impt.Tmice_update(Tmice, last_state_list, last_A, new_last_state_list)
     
     #conditional of color, which is 4, given (0, ?)    
-    assert Tmice[2][((0,0,4),A, (1,0))][4] == 0
+    assert Tmice[2][((0,0,4),last_A, (1,0))][4] == 0
     #these should hold with very high probability
-    assert Tmice[2][((0,0,4),A, (0,0))][4] > 0
-    assert Tmice[2][((0,0,4),A, (0,1))][4] > 0
+    assert Tmice[2][((0,0,4),last_A, (0,0))][4] > 0
+    assert Tmice[2][((0,0,4),last_A, (0,1))][4] > 0
     
     #conditional of x coordinate, which is ?, given (0, 4)    
-    assert Tmice[1][((0,0,4),A, (0,5))][1] == 0
-    assert Tmice[1][((0,0,4),A, (0,4))][0] > 0
-    assert Tmice[1][((0,0,4),A, (0,4))][1] > 0
+    assert Tmice[1][((0,0,4),last_A, (0,5))][1] == 0
+    assert Tmice[1][((0,0,4),last_A, (0,4))][0] > 0
+    assert Tmice[1][((0,0,4),last_A, (0,4))][1] > 0
     
    
     print("Tupdater: Tmice updater passed")
@@ -350,10 +351,97 @@ def test_select_action():
     print("Basic select_action tests passed")
     
     
+    
+def test_get_imputation():
+    
+    
+    new_pobs_state = (1,2,1,np.nan)
+    last_fobs_state = (1,1,0,2)
+    last_A = (1,1)
+    last_state_list = [(1,1,1,2),(1,1,2,2)]
+    K = len(last_state_list)
+    missing_as_state_value = -2
+    
+    #just for MI methods
+    d = 3
+    state_value_lists = [list(range(d)), list(range(d)),
+                     list(range(d)), list(range(d))] 
 
+    action_list = [(1,1),(0,0)]
+    Tstandard = impt.init_Tstandard(state_value_lists,
+                        action_list, 
+                       init_value = 0.0)
+    Tmice = impt.init_Tmice(state_value_lists,
+                        action_list, 
+                       init_value = 0.0)
 
+    
+    impute_method = "random_action"
+    new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method,
+                   new_pobs_state, last_fobs_state,
+                   last_A, last_state_list, K)
+    
+    assert new_imp_state == None and new_imp_state_list == None
+    print(f"test of {impute_method} impute method passed")
+    
+    impute_method = "last_fobs1"
+    new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method,
+                   new_pobs_state, last_fobs_state,
+                   last_A, last_state_list, K)
+    assert new_imp_state == last_fobs_state and new_imp_state_list == None
+    print(f"test of {impute_method} impute method passed")
+    
+    impute_method = "last_fobs2"
+    new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method,
+                   new_pobs_state, last_fobs_state,
+                   last_A, last_state_list, K)
+    assert new_imp_state == (1,2,1,2) and new_imp_state_list == None
+    print(f"test of {impute_method} impute method passed")
+    
+    impute_method = "missing_state"
+    new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method,
+                   new_pobs_state, last_fobs_state,
+                   last_A, last_state_list, K,
+                   missing_as_state_value = missing_as_state_value)
+    assert new_imp_state == (1,2,1,missing_as_state_value) and new_imp_state_list == None
+    print(f"test of {impute_method} impute method passed")
+    
+    impute_method = "joint"
+    new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method,
+                   new_pobs_state, last_fobs_state,
+                   last_A, last_state_list, K,
+                   Tstandard = Tstandard)
+    assert new_imp_state == None 
+    assert len(new_imp_state_list) == K
+    assert all(elem[0] == 1 and elem[1] == 2 and elem[2] == 1 for elem in new_imp_state_list)
+    assert all(elem[3] != -1 for elem in new_imp_state_list)
+    print(f"(minimal) test of {impute_method} impute method passed")
 
-def test_miss_pipeline(impute_method):
+    impute_method = "joint-conservative"
+    new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method,
+                   new_pobs_state, last_fobs_state,
+                   last_A, last_state_list, K,
+                   Tstandard = Tstandard)
+    assert new_imp_state == None 
+    assert len(new_imp_state_list) == K
+    assert all(elem[0] == 1 and elem[1] == 2 and elem[2] == 1 for elem in new_imp_state_list)
+    assert all(elem[3] != -1 for elem in new_imp_state_list)
+    print(f"(minimal) test of {impute_method} impute method passed")
+
+    impute_method = "mice"
+    new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method,
+                    new_pobs_state, last_fobs_state,
+                    last_A, last_state_list, K,
+                    Tmice = Tmice, 
+                    num_cycles = 2)
+    assert new_imp_state == None 
+    assert len(new_imp_state_list) == K
+    assert all(elem[0] == 1 and elem[1] == 2 and elem[2] == 1 for elem in new_imp_state_list)
+    assert all(elem[3] != -1 for elem in new_imp_state_list)
+    print(f"(minimal) test of {impute_method} impute method passed")
+        
+
+def test_dummy_miss_pipeline(impute_method):
     """
     A dummy run of pipeline
     """
@@ -380,19 +468,19 @@ def test_miss_pipeline(impute_method):
     
     #set dummy examples of states, rewards etc
     true_state = (0,0,4)
-    A = (0,1)
+    last_A = (0,1)
     reward = 10
-    Slist = [true_state] * K
-    Slist[0] = (0,1,4) 
+    last_state_list = [true_state] * K
+    last_state_list[0] = (0,1,4) 
     pobs_state = (0, np.nan, np.nan)
 
     # draw whether to shuffle - won't matter here though
     shuffle = impt.shuffle(p_shuffle)
     
     #get new state vector
-    new_Slist = impt.MI(method = impute_method,
-       Slist = Slist,
-       A = A,
+    new_last_state_list = impt.MI(method = impute_method,
+       last_state_list = last_state_list,
+       last_A = last_A,
        pobs_state = pobs_state,
        shuffle = shuffle,
        Tmice = Tmice,
@@ -401,22 +489,23 @@ def test_miss_pipeline(impute_method):
     
     #Update T matrix 
     if impute_method == "mice":
-        impt.Tmice_update(Tmice, Slist, A, new_Slist)
+        impt.Tmice_update(Tmice, last_state_list, last_A, new_last_state_list)
     if impute_method == "joint":
-        impt.Tstandard_update(Tstandard, Slist, A, new_Slist)
+        impt.Tstandard_update(Tstandard, last_state_list, last_A, new_last_state_list)
         
         
     #Update Q matrix
-    Q  = impt.updateQ_MI(Q, Slist, new_Slist, A, action_list, reward, alpha, gamma)
+    Q  = impt.updateQ_MI(Q, last_state_list, new_last_state_list, last_A, action_list, reward, alpha, gamma)
     
     
-    Slist = new_Slist 
+    last_state_list = new_last_state_list 
     
     print(f"A dummy example of the MI pipeline ran without error for imp method {impute_method}")
           
       
         
       
+
 
 
 
@@ -440,10 +529,11 @@ if __name__ == "__main__":
     print("--")
     test_select_action()
     print("--")
-    test_miss_pipeline("joint")
+    test_dummy_miss_pipeline("joint")
     print("--")
-    test_miss_pipeline("mice")
+    test_dummy_miss_pipeline("mice")
     print("--")
- 
+    test_get_imputation()
+    print("--")
     
     
