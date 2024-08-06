@@ -375,7 +375,7 @@ def test_get_imputation():
                         action_list, 
                        init_value = 0.0)
 
-    
+        
     impute_method = "random_action"
     new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method,
                    new_pobs_state, last_fobs_state,
@@ -384,12 +384,21 @@ def test_get_imputation():
     assert new_imp_state == None and new_imp_state_list == None
     print(f"test of {impute_method} impute method passed")
     
+    
     impute_method = "last_fobs1"
     new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method,
                    new_pobs_state, last_fobs_state,
                    last_A, last_state_list, K)
     assert new_imp_state == last_fobs_state and new_imp_state_list == None
     print(f"test of {impute_method} impute method passed")
+    
+    new_pobs_state_temp = (1,2,1,1)
+    new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method,
+                   new_pobs_state_temp, last_fobs_state,
+                   last_A, last_state_list, K)
+    assert new_imp_state == new_pobs_state_temp and new_imp_state_list == None
+    print(f"test of {impute_method} impute method passed - nothing missing case")
+    
     
     impute_method = "last_fobs2"
     new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method,
@@ -439,6 +448,18 @@ def test_get_imputation():
     assert all(elem[0] == 1 and elem[1] == 2 and elem[2] == 1 for elem in new_imp_state_list)
     assert all(elem[3] != -1 for elem in new_imp_state_list)
     print(f"(minimal) test of {impute_method} impute method passed")
+    
+    
+    new_pobs_state_temp = (1,2,1,1)
+    new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method,
+                   new_pobs_state_temp, last_fobs_state,
+                   last_A, last_state_list, K,Tmice = Tmice, 
+                   num_cycles = 2)
+    assert new_imp_state == new_pobs_state_temp 
+    assert new_imp_state_list[0] == new_pobs_state_temp
+    assert new_imp_state_list[1] == new_pobs_state_temp
+    print(f"test of {impute_method} impute method passed - nothing missing case")
+    
         
 
 def test_dummy_miss_pipeline(impute_method):
