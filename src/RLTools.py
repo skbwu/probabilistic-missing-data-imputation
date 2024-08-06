@@ -3,42 +3,30 @@ import copy
 import ImputerTools as impt
 
 
+SingleImpMethods = ["random_action", #this ultimately an attribute
+             "last_fobs1",
+             "last_fobs2",
+             "missing_state"]
 
-def get_imputation(impute_method, new_pobs_state, 
-                   last_fobs_state, last_A, last_state_list, 
-                   K, MImethods,
-                   Tstandard = None, Tmice = None, num_cycles = None):
+MImethods = ["joint", #TODO: better names for this? joint-synthetic?
+             "mice",
+             "joint-conservative"]
+
+
+def get_imputation(impute_method : str,
+                   new_pobs_state : tuple, 
+                   last_fobs_state : tuple,
+                   last_A,
+                   last_state_list : list, 
+                   K : int,
+                   Tstandard = None, 
+                   Tmice = None, 
+                   num_cycles = None,
+                   missing_as_state_value = None):
     """
     TODO: fill this in
     TOOD: test this function
 
-    Parameters
-    ----------
-    impute_method : TYPE
-        DESCRIPTION.
-    new_pobs_state : TYPE
-        DESCRIPTION.
-    last_fobs_state : TYPE
-        DESCRIPTION.
-    last_A : TYPE
-        DESCRIPTION.
-    last_state_list : TYPE
-        DESCRIPTION.
-    K : TYPE
-        DESCRIPTION.
-    MImethods : TYPE
-        DESCRIPTION.
-    Tstandard : TYPE, optional
-        DESCRIPTION. The default is None.
-    Tmice : TYPE, optional
-        DESCRIPTION. The default is None.
-    num_cycles : TYPE, optional
-        DESCRIPTION. The default is None.
-
-    Raises
-    ------
-    Exception
-        DESCRIPTION.
 
     Returns
     -------
@@ -66,13 +54,9 @@ def get_imputation(impute_method, new_pobs_state,
         elif impute_method == "missing_state":
 
             # swapping np.nan to -1 to play nicer with dictionary indexing.
-            new_imp_state = tuple([val if ~np.isnan(val) else -1 for val in new_pobs_state])
+            new_imp_state = tuple([val if ~np.isnan(val) else missing_as_state_value for val in new_pobs_state])
       
         elif impute_method in MImethods:
-
-            #generate list of imputed values
-            #note: because first state already observed, will only
-            #get here when already have defined action variable 
             new_imp_state_list = impt.MI(
                    method = impute_method,
                    last_state_list = last_state_list,
@@ -81,8 +65,7 @@ def get_imputation(impute_method, new_pobs_state,
                    shuffle = False, #deprecated
                    Tmice = Tmice,
                    Tstandard = Tstandard,
-                   num_cycles = num_cycles)
-            
+                   num_cycles = num_cycles)        
             new_imp_state = None #don't need this
         else:
             raise Exception("impute_method choice is not currently supported.")
