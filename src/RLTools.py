@@ -88,45 +88,46 @@ def get_action(imp_state : tuple,
                action_list : list, 
                Q : dict, 
                epsilon : float,
-               action_option : str,
-               missing_as_state_value = -1):
+               action_option : str):
     """
-    #TODO!!!!!
-
     Parameters
     ----------
     imp_state : tuple
-        DESCRIPTION.
-    last_imp_state_list : list
-        DESCRIPTION.
+        the state that should be used to determine the action
+        if this argument is None, that means impute_method must be "random_action"
+        and a random action is taken
+        
+    last_imp_state_list : list of tuples
+        if impute_method is an MI method, this list of states is used to determine
+        action with combination method as specified by action_option
+    
     impute_method : str
-        DESCRIPTION.
+        method of imputation being used. Only matters if this is "random_action",
+        a multiple imputation method, or something else
+    
     action_list : list
-        DESCRIPTION.
+        list of possible actions
+        
     Q : dict
-        DESCRIPTION.
-    epsilon : float
-        DESCRIPTION.
+        dictionary as of format as initialized by init_Q in ImputerTools
+        
+    epsilon : float between 0 and 1
+        set to 0 for greedy action selection 
+    
     action_option : str
-        DESCRIPTION.
-    missing_as_state_value : TYPE, optional
-        DESCRIPTION. The default is -1.
-
-    Raises
-    ------
-    Exception
-        DESCRIPTION.
+        if impute_method is a MI method, this specifies how to do action selection
+        using the list of states in last_imp_state_list
 
     Returns
     -------
-    None.
+    An element of action_list representing next action to take
 
     """
-    if impute_method == "random_action":
-            action = action_list[np.random.choice(a=len(action_list))]
+    if impute_method == "random_action" and imp_state is None:
+        action = action_list[np.random.choice(a=len(action_list))]
                       
     elif impute_method in MImethods:
-            action = impt.select_action(state = last_imp_state_list, 
+        action = impt.select_action(state = last_imp_state_list, 
                           action_list = action_list,
                           Q = Q, 
                           epsilon = epsilon, 
