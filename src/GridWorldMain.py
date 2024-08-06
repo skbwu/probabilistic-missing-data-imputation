@@ -176,30 +176,7 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
                        epsilon = epsilon,
                        action_option = action_option)
         
-        # # do we have any missing state values?
-        # if np.any(np.isnan(pobs_state).mean()):
-        #     # deal with it accordingly to get imputed actions
-        #     if impute_method == "last_fobs1":
-        #         action = impt.select_action(last_fobs_state, action_list, Q, epsilon)
-        #     elif impute_method == "last_fobs2":
-        #         action = impt.select_action(last_fobs_state, action_list, Q, epsilon)
-        #     elif impute_method == "random_action":
-        #         action = action_list[np.random.choice(a=len(action_list))]
-        #     elif impute_method == "missing_state":
-        #         # for this method only, we need to convert np.nan to -1
-        #         pobs_state_temp = tuple([val if ~np.isnan(val) else -1 for val in pobs_state])
-        #         action = impt.select_action(pobs_state_temp, action_list, Q, epsilon)
-        #     elif impute_method in MImethods:
-        #         action = impt.select_action(state = last_imp_state_list, 
-        #                       action_list = action_list,
-        #                       Q = Q, epsilon = epsilon, option = action_option)
-        #     else:
-        #         raise Exception("impute_method choice is not currently supported.")
-        
-        # # if no missingness, select an action by standard epsilon greedy 
-        # else:
-        #     action = impt.select_action(pobs_state, action_list, Q, epsilon)
-        
+     
         # add to our logs FOR THIS TIMESTEP!
         t_step_row += [action[0], action[1]]
         
@@ -249,60 +226,13 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
         # IMPUTATION
         # make imputation for the new_pobs_state, if not everything is observed.
         # else just pass on the observed state
-        ###############################################
-        
+        ###############################################   
         new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method = impute_method,
                            new_pobs_state  = new_pobs_state, last_fobs_state = last_fobs_state, 
                            last_A = action, 
                            last_state_list = last_imp_state_list,
                            K = K, Tstandard = Tstandard, Tmice = Tmice, num_cycles = num_cycles,
                            missing_as_state_value = missing_as_state_value)
-        
-        # if np.any(np.isnan(np.array(new_pobs_state)).mean()):
-
-        #     if impute_method == "last_fobs1":
-        #         new_imp_state = copy.deepcopy(last_fobs_state)
-                
-        #     elif impute_method == "last_fobs2":
-        #         new_imp_state = tuple([i if ~np.isnan(i) else j for (i,j) in zip(new_pobs_state, last_fobs_state)])
-            
-        #     elif impute_method == "random_action":
-        #         new_imp_state = None # we're not imputing any states!
-            
-        #     elif impute_method == "missing_state":
-
-        #         # swapping np.nan to -1 to play nicer with dictionary indexing.
-        #         new_imp_state = tuple([val if ~np.isnan(val) else -1 for val in new_pobs_state])
-          
-        #     elif impute_method in MImethods:
-
-        #         #decide if we will shuffle (affects Q and T updates below)
-        #         shuffle = impt.shuffle(p_shuffle)
-
-        #         #generate list of imputed values
-        #         #note: because first state already observed, will only
-        #         #get here when already have defined action variable 
-        #         new_imp_state_list = impt.MI(
-        #                method = impute_method,
-        #                last_state_list = last_imp_state_list,
-        #                last_A = action, 
-        #                pobs_state = new_pobs_state,
-        #                shuffle = shuffle,
-        #                Tmice = Tmice,
-        #                Tstandard = Tstandard,
-        #                num_cycles = num_cycles)
-
-        #         new_imp_state = None #don't need this
-        #     else:
-        #         raise Exception("impute_method choice is not currently supported.")
-
-        # # if nothing is missing, just set new_imp_state equal to the new_pobs_state
-        # else:
-        #     # just make a deepcopy!
-        #     new_imp_state = copy.deepcopy(new_pobs_state)
-        #     if impute_method in MImethods:
-        #         new_imp_state_list = [new_pobs_state] * int(K)
-
        
         ######################################
         # Q update (if permitted)
@@ -350,7 +280,7 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
                                             new_Slist = new_imp_state_list)
 
         # check whether our last_fobs_state can be updated
-        if ~np.any(np.isnan(pobs_state).mean()):
+        if ~np.any(np.isnan(pobs_state)):
             last_fobs_state = copy.deepcopy(pobs_state)
 
         # now that we have updated Q and T functions
