@@ -117,7 +117,7 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
     true_state = (d-1, 0, env_colors[d-1, 0])
     #  Assume fully-observed initial state and initialize first obs
     #  state and first imp state
-    pobs_state, last_imp_state = true_state, true_state
+    last_pobs_state, last_imp_state = true_state, true_state
 
     # if doing multiple imputation method, initilize state list
     if impute_method in MImethods:
@@ -237,7 +237,6 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
         ######################################
         # Q update (if permitted)
         ######################################
-        # multiple imputation way of updating Q with fractional allocation   
         if impute_method in MImethods:
             Q  = impt.updateQ_MI(Q, 
                                 Slist = last_imp_state_list, 
@@ -245,17 +244,16 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
                                 A = action, action_list = action_list,
                                 reward = reward, alpha = alpha, gamma = gamma)
             
-        # if we have random_action method, then we cannot update 
+        # if we have random_action method, then we cannot update unless nothing missing in 
+        # last and current state
         elif impute_method != "random_action":
-            Q = impt.update_Q(Q, last_imp_state, action, action_list, reward, new_imp_state, alpha, gamma)
-    
-        #if nothing is missing in last or current state, then we can
-        #update Q under random_action
-        elif ~np.any(np.isnan(new_pobs_state)):
-            if ~np.any(np.isnan(pobs_state)):
-                Q = impt.update_Q(Q, pobs_state, action, action_list, reward, new_pobs_state, alpha, gamma)
+            Q = impt.update_Q(Q, last_imp_state, action, action_list,
+                              reward, new_imp_state, alpha, gamma)
+        elif impute_method == "random_action":
+              if ~np.any(np.isnan(new_pobs_state)):
+                  if ~np.any(np.isnan(last_pobs_state)):
+                     Q = impt.update_Q(Q, last_imp_state, action, action_list, reward, new_imp_state, alpha, gamma)
 
-    
         ######################################
         # T update (if needed)
         ######################################
@@ -273,33 +271,37 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
             if impute_method == "joint-conservative":
                 #only update if previous and current state are fully observed
                 if ~np.any(np.isnan(new_pobs_state)):
-                    if ~np.any(np.isnan(pobs_state)):
+                    if ~np.any(np.isnan(last_pobs_state)):
                         impt.Tstandard_update(Tstandard, 
                                             Slist = last_imp_state_list,
                                             A = action,
                                             new_Slist = new_imp_state_list)
 
+        # Other updates
+        ##########################################
         # check whether our last_fobs_state can be updated
-        if ~np.any(np.isnan(pobs_state)):
-            last_fobs_state = copy.deepcopy(pobs_state)
+        if ~np.any(np.isnan(new_pobs_state)):
+            last_fobs_state = copy.deepcopy(new_pobs_state)
 
         # now that we have updated Q and T functions
         # update true_state, pobs_state, last_imp_state, last_imp_state_list
         # as 'current state' for for the next round
-        true_state = copy.deepcopy(new_true_state)
-        pobs_state = copy.deepcopy(new_pobs_state)
+        true_state = copy.deepcopy(new_true_state) #TODO: is this necessary?
+        last_pobs_state = copy.deepcopy(new_pobs_state)
         last_imp_state = copy.deepcopy(new_imp_state)
         if impute_method in MImethods:
             last_imp_state_list = copy.deepcopy(new_imp_state_list)
         
-        # update our missing data counters
-        if np.isnan(pobs_state).sum() == 0:
+        # LOGGING
+        #########
+        # update our missing data counters  #TODO: generalize
+        if np.isnan(new_pobs_state).sum() == 0:
             counts_0miss += 1
-        elif np.isnan(pobs_state).sum() == 1:
+        elif np.isnan(new_pobs_state).sum() == 1:
             counts_1miss += 1
-        elif np.isnan(pobs_state).sum() == 2:
+        elif np.isnan(new_pobs_state).sum() == 2:
             counts_2miss += 1
-        elif np.isnan(pobs_state).sum() == 3:
+        elif np.isnan(new_pobs_state).sum() == 3:
             counts_3miss += 1
 
         # update our path-length counter
