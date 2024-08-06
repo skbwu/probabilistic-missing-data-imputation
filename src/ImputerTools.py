@@ -405,8 +405,10 @@ def draw_Tmice(Tmice, S, A, focal, Scomplete = None):
 
     S : tuple describing state
     A : tuple describing action
-    Scomplete: a tuple describing state
-    focal : an integer in [0,1,2] 
+    Scomplete: a tuple describing state - completed state from past
+               cycles of MICE
+    focal : the focal state that drawing from - must be an int in 
+            0,...,len(Tmice)-1
   
     Returns
     -------
@@ -422,7 +424,7 @@ def draw_Tmice(Tmice, S, A, focal, Scomplete = None):
     assert type(S) == tuple, "S is not tuple"
     assert type(A) == tuple, "A is not tuple"
     assert type(Scomplete) == tuple or Scomplete is None, "Scomplete is not a tuple"
-    assert focal in [0,1,2], "focal out of range"
+    #assert type(focal) == int and focal >= 0 and focal <= len(Tmice.keys())-1, "focal out of range"
     
     #if given, you draw from focal given other entries in Scomplete    
     if Scomplete is not None:
@@ -430,7 +432,6 @@ def draw_Tmice(Tmice, S, A, focal, Scomplete = None):
         Snf = tuple(np.delete(Scomplete, focal)) #S non-focal
         rel_dict = Tmice[focal][(S,A, Snf)]
         new_entry = sample_entry(rel_dict)
-        
         #replace old value with the new sampled entry
         Scomplete = np.array(Scomplete) #in case it is tuple
         Scomplete[focal] = new_entry
@@ -463,10 +464,12 @@ def draw_mouse(Tmice, S, A, pobs_state, num_cycles = 10):
     if num_miss == 0:
         return pobs_state
     
-    # draw initially over marginal x | S,A type dist
-    Istate = [0,0,0]
+    # Initialize imputed state
+    Istate = [0]*len(S)
+    
+    # draw initially over marginal x | S,A dist for each missing state
     for k in where_miss:
-        Istate[k] = int(draw_Tmice(Tmice, S, A, focal = k))
+        Istate[k] = int(draw_Tmice(Tmice, S, A, focal = k, Scomplete = None))
     for k in where_no_miss:
         Istate[k] = pobs_state[k]
 
@@ -481,6 +484,7 @@ def draw_mouse(Tmice, S, A, pobs_state, num_cycles = 10):
     check = [pobs_state[i] == Istate[i] for i in where_no_miss]
     if len(check) > 0:
         assert all(check), "failed to maintain observed state"
+        
     return(Istate)
 
     
