@@ -96,7 +96,7 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
                             action_list = action_list, init_value = 0.0)
 
     #  Assume fully-observed initial state and initialize first obs state and first imp state
-    last_pobs_state, last_imp_state = env.current_state, env.current_state#true_state, true_state
+    last_pobs_state, last_imp_state = env.current_state, env.current_state
 
     # if doing multiple imputation method, initilize state list
     if impute_method in MImethods:
@@ -143,10 +143,7 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
         # create a row to store our desired TIMESTEP-SPECIFIC METRICS TOO!
         t_step_row = [t_step]
 
-        #############################################################
-        # Action selection based on last state(s) or random selection 
-        #############################################################
-        # "choose action A from S using policy-derived from Q (e.g., \epsilon-greedy)"
+        # Choose action A from S using policy-derived from Q, possibly e-greedy
         action = rlt.get_action(last_imp_state = last_imp_state, 
                        last_imp_state_list = last_imp_state_list,
                        impute_method = impute_method,
@@ -158,15 +155,11 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
         # add to our logs FOR THIS TIMESTEP!
         t_step_row += [action[0], action[1]]
         
-        ###############################################
         # Take action A, observe R, S'
-        # Taking action affects underlying TRUE state, even if we won't observe it!!!
-        ###############################################
-        reward, new_true_state = env.step(action) #environment stochasticity handled internally
+        reward, new_true_state, terminal = env.step(action) #environment stochasticity handled internally
         
         # record our NEW TRUE STATE
         t_step_row += [new_true_state[0], new_true_state[1], new_true_state[2]]
-
         # update our reward counter + river counters
         total_reward += reward
         if reward == env.water_penalty:
@@ -175,7 +168,6 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
         ###############################################
         # Apply missingness mechanism to generate our new partially observed state
         ###############################################
-
         # simulate our partially-observed mechanism.
         if env_missing == "MCAR":
             new_pobs_state = gwe.MCAR(new_true_state, thetas)
@@ -253,7 +245,6 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
         # now that we have updated Q and T functions
         # update true_state, pobs_state, last_imp_state, last_imp_state_list
         # as 'current state' for for the next round
-        true_state = copy.deepcopy(new_true_state) #TODO: is this necessary?
         last_pobs_state = copy.deepcopy(new_pobs_state)
         last_imp_state = copy.deepcopy(new_imp_state)
         if impute_method in MImethods:
@@ -275,7 +266,7 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
         path_length += 1
 
         # also see if we hit the terminal state
-        if (true_state[0] == 6) and (true_state[1] == 7):
+        if terminal:
 
             # end our timer + record time elapsed FOR THIS EPISODE!
             end_time = time.time()

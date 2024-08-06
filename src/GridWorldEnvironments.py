@@ -129,8 +129,14 @@ class LakeWorld():
         if self.river_restart:
             if (reward == self.water_penalty):
                 self.current_state = self.start_location 
+                
+        # Terminal flag #TODO: test this
+        if (self.current_state[0],self.current_state[1]) == self.terminal_location:
+            terminal = True
+        else: 
+            terminal = False
         
-        return(reward, self.current_state)
+        return(reward, self.current_state, terminal)
 
 
 
