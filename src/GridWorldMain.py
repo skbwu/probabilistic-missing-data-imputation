@@ -40,9 +40,9 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
 
     
     # for better referencing later (7/16/2024).
-    baseline_penalty = -1
-    water_penalty = -10
-    end_reward = 100
+    # baseline_penalty = -1
+    # water_penalty = -10
+    # end_reward = 100
 
     # For convenience
     MImethods = ["joint", "mice", "joint-conservative"]
@@ -54,30 +54,42 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
     #assert num_cycles >= 1 or num_cycles is None
     
     # initializing our environments + corresponding colors
-    d = 8 # dimension of our gridworld
-    colors = [0,1,2] #colors encoded with 0,1,2
-    gw0, gw1, gw2 = gwe.build_grids(d=8, baseline_penalty = baseline_penalty, 
-                                    water_penalty = water_penalty, 
-                                    end_reward = end_reward)
-    gw0_colors = gwe.make_gw_colors(gw0)
-    gw1_colors = gwe.make_gw_colors(gw1)
-    gw2_colors = gwe.make_gw_colors(gw2)
+    
+    env = gwe.LakeWorld(d = 8,
+                        colors = [0,1,2],
+                        baseline_penalty = -1, 
+                        water_penalty = -10,
+                        end_reward = 100,
+                        fog_i_range = (0,2),
+                        fog_j_range = (5,7),
+                        p_wind_i = p_wind_i,
+                        p_wind_j = p_wind_j,
+                        p_switch = p_switch,
+                        start_location = (7, 0),
+                        terminal_location = (6, 7))
+    
+    #d = 8 # dimension of our gridworld
+    #colors = [0,1,2] #colors encoded with 0,1,2
+    # gw0, gw1, gw2 = gwe.build_grids(d=8, baseline_penalty = baseline_penalty, 
+    #                                 water_penalty = water_penalty, 
+    #                                 end_reward = end_reward)
+    # gw1_colors = gwe.make_gw_colors(gw1)
+    # gw2_colors = gwe.make_gw_colors(gw2)
 
-    # store quick-access indices for the environment
-    environments = {
-                    0: [gw0, gw0_colors], # baseline
-                    1: [gw1, gw1_colors], # non-flooding CORRECTED 4/16/2024
-                    2: [gw2, gw2_colors] # flooding
-                   }
+    # # store quick-access indices for the environment
+    # environments = {
+    #                 1: [gw1, gw1_colors], # non-flooding 
+    #                 2: [gw2, gw2_colors] # flooding
+    #                }
     
     # fog range - fixed.
     i_range, j_range = (0, 2), (5, 7)
 
     # what is our starting "current environment"
-    ce = 1
+    #ce = 1
 
     # which environments are we flipping through?
-    indices = np.array([1, 2]) # the two to be flipping between, if any. If just one, make first element
+    #indices = np.array([1, 2]) # the two to be flipping between, if any. If just one, make first element
     
     # set our seed for use in multiple trials
     np.random.seed(seed)
@@ -90,8 +102,8 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
     action_descs = gwe.load_actions(allow_stay_action = allow_stay_action)
     action_list = list(action_descs.keys())
     
-    # specify a state_value_list - note order matters #new 7.31.2024
-    state_value_lists = gwe.get_state_value_lists(d, colors)
+    # specify a state_value_list - note order matters 
+    state_value_lists = env.state_value_lists
     
     # initialize our Q matrix: {((i, j, color), (a1, a2))}
     if impute_method == "missing_state":
@@ -108,23 +120,24 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
     # initialize Transition matrices
     Tstandard = impt.init_Tstandard(state_value_lists = state_value_lists,
                                    action_list = action_list, init_value = 0.0)
-    Tmice = impt.init_Tmice(d = d, action_list = action_list, colors = colors, init_value = 0)
+    Tmice = impt.init_Tmice(state_value_lists = state_value_lists,
+                            action_list = action_list, init_value = 0.0)
 
     # initialize our starting environment + corresponding colors
-    env, env_colors = environments[ce][0], environments[ce][1]
+    #env, env_colors = environments[ce][0], environments[ce][1]
 
     # initialize our true initial state to be the bottom left corner.
-    true_state = (d-1, 0, env_colors[d-1, 0])
+    #true_state = (d-1, 0, env_colors[d-1, 0])
     #  Assume fully-observed initial state and initialize first obs
     #  state and first imp state
-    last_pobs_state, last_imp_state = true_state, true_state
+    last_pobs_state, last_imp_state = env.current_state, env.current_state#true_state, true_state
 
     # if doing multiple imputation method, initilize state list
     if impute_method in MImethods:
-        last_imp_state_list = [true_state] * int(K)
+        last_imp_state_list = [env.current_state] * int(K)
 
     # initialize variable for our last fully-obs-state
-    last_fobs_state = copy.deepcopy(true_state)
+    last_fobs_state = env.current_state
 
     '''
     DataFrame to log our results for this simulation:
@@ -186,23 +199,23 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
         # we won't observe it!!!
         ###############################################
 
-        # toggle our environment potentially!
-        env, env_colors = environments[gwe.get_environment(ce, p_switch, indices)]
+        reward, new_true_state = env.step(action) #environment stochasticity handled internally
 
+        # toggle our environment potentially!
+        #env, env_colors = environments[gwe.get_environment(ce, p_switch, indices)]
         # figure out what our new state is, which tells us our reward
-        new_true_state = gwe.true_move(true_state, action, env, env_colors, p_wind_i, p_wind_j)
-        reward = env[int(new_true_state[0]), int(new_true_state[1])]
-        
+        #new_true_state = gwe.true_move(true_state, action, env, env_colors, p_wind_i, p_wind_j)
+        #reward = env[int(new_true_state[0]), int(new_true_state[1])]
         # have the option of moving back to start if fall into the river
-        if (reward == water_penalty) and (river_restart == True):
-            new_true_state = (7, 0, 0.0)
+        #if (reward == env.water_penalty) and (river_restart == True):
+        #    new_true_state = (7, 0, 0.0)
         
         # record our NEW TRUE STATE
         t_step_row += [new_true_state[0], new_true_state[1], new_true_state[2]]
 
         # update our reward counter + river counters
         total_reward += reward
-        if reward == water_penalty:
+        if reward == env.water_penalty:
             steps_river += 1
 
         ###############################################

@@ -10,14 +10,138 @@ from tqdm.notebook import tqdm
 import seaborn as sns
 
 
+#TODO: class specifictation
+#TODO: could make grid itself a class
+class LakeWorld():
+    """TODO: class specification """
+
+    def __init__(self, d, colors = [0,1,2],
+                 baseline_penalty = -1, 
+                 water_penalty = -10,
+                 end_reward = 100,
+                 river_restart = False, 
+                 fog_i_range = (0,2),
+                 fog_j_range = (5,7),
+                 p_wind_i = 0,
+                 p_wind_j = 0,
+                 p_switch = 0,
+                 start_location = (7, 0),
+                 terminal_location = (6, 7)):
+        
+        self.d = d
+        self.colors = colors
+        self.p_switch = p_switch
+        self.start_location = start_location
+        self.terminal_location = terminal_location
+        self.baseline_penalty = baseline_penalty
+        self.water_penalty = water_penalty
+        self.end_reward = end_reward
+        self.river_restart = river_restart 
+        
+        #set-up grids and their colors in a dictionary
+        basegrid = build_grid(d = d, baseline_penalty = baseline_penalty,
+                            water_penalty = water_penalty, end_reward = end_reward,
+                            flood = False)
+        floodgrid = build_grid(d = d, baseline_penalty = baseline_penalty,
+                            water_penalty = water_penalty, end_reward = end_reward,
+                            flood = True)
+        basegridcol = make_gw_colors(basegrid)
+        floodgridcol = make_gw_colors(floodgrid)
+        self.environments = {0 : [basegrid, basegridcol],
+                             1 : [floodgrid, floodgridcol]}
+     
+        self.environment_options = [0,1]#0 for basegrid, 1 for floodgrid
+        self.current_environment = 1
+        
+        # states
+        self.state_value_lists = [list(range(d)), list(range(d)), colors]
+        
+        # default to initializing at start
+        i,j = start_location
+        self.current_state = (i,j, self.environments[self.current_environment][1][i,j])
+        
+        # wind settings
+        self.p_wind_i = p_wind_i
+        self.p_wind_j = p_wind_j
+        
+        # missingness settings
+        self.fog_i_range = fog_i_range
+        self.fog_j_range = fog_j_range
+        
+    
+    def set_state(self,state): 
+        """Allow user to manually set the state."""
+        self.current_state = state
+
+    def get_reward(self):
+        """ Get reward from current state """
+        reward = self.environments[self.current_environment][0][self.current_state[0],
+                                                                self.current_state[1]]
+        return(reward)        
+
+    def refresh_environment(self):
+        """With probability self.p_switch, flip current environment to the other
+        option. Otherwise, keep it the same. This creates a markov chain.
+        """ 
+        u = np.random.uniform()
+        if u < self.p_switch: 
+            self.current_environment = np.abs(1-self.current_environment) #if 0, 1. If 1, 0       
+
+    def step(self, action): 
+        """Implement an action by updating current state. 
+        Also implements any stochasticity in the environment before 
+        new state is returned""" 
+        
+        #implement stochasticity
+        self.refresh_environment()
+
+        #if current state is terminal state, telaport to origin before take action
+        if self.current_state == self.terminal_location:
+            self.current_state = self.start_location
+        
+        # extract the state quantities
+        i, j, c = tuple(self.current_state)
+        
+        # proposed movement
+        i_new = int(np.clip(a=i-action[1], a_min=0, a_max=self.d-1))
+        j_new = int(np.clip(a=j+action[0], a_min=0, a_max=self.d-1))
+     
+        # compile the new state (not color yet)
+        new_loc = np.array([i_new, j_new])
+        
+        # possibly add wind to the new state
+        new_loc = wind(new_loc, self.d, self.p_wind_i, self.p_wind_j)
+        
+        # clip so that wind does not push outside of 3 x 3 grid from original state 
+        i_new = int(np.clip(new_loc[0], self.current_state[0]-1, self.current_state[0]+1))
+        j_new = int(np.clip(new_loc[1], self.current_state[1]-1, self.current_state[1]+1))
+        
+        # get color of final new state
+        new_col = self.environments[self.current_environment][1][i_new, j_new]
+       
+        # Update state
+        self.current_state = (i_new, j_new, new_col)
+        
+        # Get reward
+        reward = self.get_reward()
+        
+        # Check if should be sent back to start
+        if self.river_restart:
+            if (reward == self.water_penalty):
+                self.current_state = self.start_location 
+        
+        return(reward, self.current_state)
+
+
 
 ####################
 # Environment Set-up
 ####################
 
-def build_grids(d, baseline_penalty = -1, 
+def build_grid(d, baseline_penalty = -1, 
                 water_penalty = -10,
-                end_reward = 100):
+                end_reward = 100,
+                flood = False):
     """
     Build grid worlds with state vector (y,x,c) characterized by the presence
     of water (negative reward) and dry land (positive reward) as well
@@ -37,6 +161,8 @@ def build_grids(d, baseline_penalty = -1,
     ----------
     d : int 
         dimension of square grid world
+        
+    flood : whether lake in grid should be flooding
 
     Returns
     -------
@@ -45,32 +171,33 @@ def build_grids(d, baseline_penalty = -1,
 
     #TODO 
     CAUTION:  this is not yet fully genearlized to any d. It works as expected for
-    d=8  but maybe not fpr other values
+    d=8  but maybe not for other values
     
     """
     # baseline grid
-    gw0 = np.full(shape=(d, d), fill_value=-1.0); gw0[0, -1] = end_reward
-
+    #gw0 = np.full(shape=(d, d), fill_value=-1.0); gw0[0, -1] = end_reward
     bridge_height = d-2
 
-    # bridge grid world (no pond overflow)
-    gw1 = np.full(shape=(d, d), fill_value= baseline_penalty)
-    gw1[:, (d-5):(d-3)] = water_penalty  #the water - width
-    gw1[bridge_height,(d-5):(d-3)] = baseline_penalty #the bridge
-    gw1[0:3,:] = -1.0;  #clear water on top
-    gw1[bridge_height, -1] = +end_reward #final spot
-
-    # bridge grid world (yes pond overflow)
-    gw2 = np.full(shape=(d, d), fill_value= baseline_penalty)
-    gw2[:, (d-6):(d-2)] = water_penalty #the water - width - one wider
-    gw2[bridge_height,(d-6):(d-2)] = baseline_penalty #the bridge
-    gw2[0:2,:] = -1.  #clear water on top (make it one wider)
-    gw2[bridge_height, -1] = +end_reward
+    # bridge grid world (no pond flood)
+    if not flood:
+        gw = np.full(shape=(d, d), fill_value= baseline_penalty)
+        gw[:, (d-5):(d-3)] = water_penalty  #the water - width
+        gw[bridge_height,(d-5):(d-3)] = baseline_penalty #the bridge
+        gw[0:3,:] = -1.0;  #clear water on top
+        gw[bridge_height, -1] = +end_reward #final spot
+        
+    if flood:
+        # bridge grid world (yes pond flood)
+        gw = np.full(shape=(d, d), fill_value= baseline_penalty)
+        gw[:, (d-6):(d-2)] = water_penalty #the water - width - one wider
+        gw[bridge_height,(d-6):(d-2)] = baseline_penalty #the bridge
+        gw[0:2,:] = -1.  #clear water on top (make it one wider)
+        gw[bridge_height, -1] = +end_reward
     
-    return(gw0, gw1, gw2)
+    return(gw)
 
 
-def get_state_value_lists(d, colors):
+def get_state_value_lists(d, colors):  #TODO: deprecate
     """
     Given dimension of grid and a list of colors,
     create state_value_lists, a list of lists where each sublist
@@ -100,7 +227,7 @@ def get_environment(ce, p, indices):
     * with probability p, from ce to 1-ce
     * with probability (1-p), keep environment constant
     
-    Meant for toggling between overflow state and non-overflow state
+    Meant for toggling between flood state and non-flood state
 
     Parameters
     ----------
@@ -121,7 +248,7 @@ def get_environment(ce, p, indices):
     else: 
         return ce
     
-    #return 1 if np.random.uniform() < p_overflow else 2
+    #return 1 if np.random.uniform() < p_flood else 2
     
 
 def make_gw_colors(gw):
@@ -221,6 +348,8 @@ def wind(state, d, p_wind_i, p_wind_j):
     given we do move, left vs right or up vs down is
     selected with probabilities (1/2,1/2)
 
+    Note: state can be just a location (length 2 tuple) and in that case,
+    function also returns a location (length 2 tuple)
 
     """
     # make sure state is an np.array
@@ -270,6 +399,7 @@ def true_move(state, a, gw, gw_colors, p_wind_i, p_wind_j):
         return (7, 0, 0.0)
        
     d  = gw.shape[0]
+    
     
     # extract the state quantities
     i, j, c = tuple(state)
