@@ -350,15 +350,13 @@ def test_select_action():
     
     print("Basic select_action tests passed")
     
-    rlt.get_action(pobs_state = (0,0,np.nan),
-                   last_fobs_state = (0,0,0),
+    rlt.get_action(last_imp_state = (0,0,3),
                    last_imp_state_list = [(0,0,1),(0,0,2)],
                   impute_method = "last_fobs1",
                   action_list = action_list,
                   Q = Q, 
                   epsilon = .05,
-                  action_option = "voting2", 
-                  missing_as_state_value = -1)
+                  action_option = "voting2")
         
     print("get_action function runs")
     
