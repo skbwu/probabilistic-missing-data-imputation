@@ -46,6 +46,8 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
     if testmode:
         assert K >= 1 or K is None
         assert num_cycles >= 1 or num_cycles is None
+        assert epsilon >= 0
+        #TODO - add other checks?
 
     # For convenience
     MImethods = ["joint", "mice", "joint-conservative"]
@@ -70,6 +72,7 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
                         action_dict = "default",
                         allow_stay_action = allow_stay_action
                         )
+    
     # Get other environment attributes
     action_list = env.get_action_list()
     state_value_lists = env.state_value_lists
@@ -80,10 +83,6 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
     # Set-up logger
     logger = gwe.LakeWorldLogger() #***
    
-    
-    ###############################################################
-    ##### INITIALIZING START OF SIMULATIONS + DATA STRUCTURES #####
-    ###############################################################
     # initialize Q matrices
     if impute_method == "missing_state":
         Q = impt.init_Q(state_value_lists,
@@ -95,7 +94,6 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
                        action_list, 
                        include_missing_as_state=False)
 
-    
     # Initialize Transition matrices
     Tstandard = impt.init_Tstandard(state_value_lists = state_value_lists,
                                    action_list = action_list, init_value = 0.0)
@@ -108,14 +106,10 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
     last_imp_state_list = [env.current_state] * int(K) 
     last_fobs_state = env.current_state
 
-    
-   
-    ###############################################################
-    ##### RUNNING SIMULATIONS FOR EACH TIMESTEP ###################
-    ###############################################################
+  
+    logger.start_epsiode() #start episode 1
 
-    logger.start_epsiode()
-
+    ###########################################################################
     for t_step in range(max_iters):
         
         logger.start_t_step()
@@ -222,36 +216,8 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
     if "results" not in os.listdir():
         os.mkdir("results")
 
-    # start our filename: p_switch = PS, PW = p_wind_{i,j}, MM = missingness mechanism
-    fname = f"PS={p_switch}_PW={p_wind_i}_MM={env_missing}"
-
-    # record whether stay in place action was allowed or not
-    if allow_stay_action:
-        fname += "_ASA=T"
-    else:
-        fname += "_ASA=F"
-
-    # record the MCAR variables
-    if env_missing == "MCAR":
-
-        # all theta_i are the same, just record what the theta was.
-        fname += f"_MCAR_theta={MCAR_theta[0]}"
-
-    # record the Mcolor variables
-    elif env_missing == "Mcolor":
-
-        # only thing that is differential/changing is whether the last value is 0.0 or something else.
-        fname += f"_t-color={color_theta_dict[0][1]}+{color_theta_dict[0][2]}"
-
-    # record the Mfog variables    
-    elif env_missing == "Mfog":
-
-        # record fog-in and fog-out theta values (equal for each component)
-        fname += f"_t-in={theta_in[0]}_t-out={theta_out[0]}"
-
-    # else, throw a hissy fit
-    else:
-        raise Exception("Missingness mechanism is not supported.")
+    # start filename with environment-specific aspects
+    fname = env.get_filename(env_missing)
 
     # add in our imputation mechanism
     IM_desc = impute_method.replace("_", "-")
@@ -260,6 +226,14 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
     if impute_method in MImethods:
         # encode NC: num_cycles, K: no. of imputations, PS: p_shuffle
         fname += f"_NC={num_cycles}_K={K}_p-shuf={p_shuffle}"
+        
+    # add in action option
+    if action_option == "voting1":
+        fname += "_v1"
+    if action_option == "voting2":
+        fname += "_v2"
+    if action_option == "averaging":
+        fname += "_avg"
 
     # add in number of maximum iterations
     fname += f"_max-iters={max_iters}"
