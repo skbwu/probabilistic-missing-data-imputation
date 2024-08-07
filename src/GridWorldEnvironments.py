@@ -267,6 +267,41 @@ class LakeWorld():
         return mm.MCAR(self.current_state, theta_c)
     
     
+    def get_filename(self, env_missing):
+        """ Produce the part of the filename that concerns environment settings
+        or missingness mechanism settings, which may be specific to environment"""
+        
+        # start our filename: p_switch = PS, PW = p_wind_{i,j}, MM = missingness mechanism
+        fname = f"PS={self.p_switch}_PW={self.p_wind_i}_MM={env_missing}"
+    
+        # record whether stay in place action was allowed or not
+        if self.allow_stay_action:
+            fname += "_ASA=T"
+        else:
+            fname += "_ASA=F"
+    
+        # MISSING MECHANISM
+        # record the MCAR variables
+        if env_missing == "MCAR":
+            # all theta_i are the same, just record what the theta was.
+            fname += f"_MCAR_theta={self.MCAR_theta[0]}"
+        # record the Mcolor variables
+        elif env_missing == "Mcolor":
+            # only thing that is differential/changing is whether the last value is 0.0 or something else.
+            fname += f"_t-color={self.color_theta_dict[0][1]}+{self.color_theta_dict[0][2]}"
+        # record the Mfog variables    
+        elif env_missing == "Mfog":
+            # record fog-in and fog-out theta values (equal for each component)
+            fname += f"_t-in={self.theta_in[0]}_t-out={self.theta_out[0]}"
+        # else, throw a hissy fit
+        else:
+            raise Exception("Missingness mechanism is not supported.")
+            
+    
+        
+            
+    
+    
     
 
 ##################################
@@ -380,9 +415,9 @@ class LakeWorldLogger():
         self.t_step_logs.loc[len(self.t_step_logs.index)] = self.t_step_row
         
       
-        
-        
-        
+   
+            
+            
         
  
         
