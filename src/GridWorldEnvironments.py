@@ -9,6 +9,8 @@ import sys, copy, os, shutil
 from tqdm.notebook import tqdm
 import seaborn as sns
 
+import MissingMechanisms as mm
+
 
 #TODO: class specifictation
 #TODO: could make grid itself a class
@@ -16,17 +18,20 @@ class LakeWorld():
     """TODO: class specification """
 
     def __init__(self, d, colors = [0,1,2],
-                 baseline_penalty = -1, 
+                 baseline_penalty = -1,  #grid configuration
                  water_penalty = -10,
                  end_reward = 100,
+                 start_location = (7, 0),
+                 terminal_location = (6, 7),
                  river_restart = False, 
-                 fog_i_range = (0,2),
-                 fog_j_range = (5,7),
-                 p_wind_i = 0,
+                 p_wind_i = 0,  #environment stochasticity
                  p_wind_j = 0,
                  p_switch = 0,
-                 start_location = (7, 0),
-                 terminal_location = (6, 7)):
+                 fog_i_range = (0,2), #MFOG parameters
+                 fog_j_range = (5,7),
+                 thetas_in = 0,  
+                 thetas_out = 0
+                 ):
         
         self.d = d
         self.colors = colors
@@ -37,7 +42,10 @@ class LakeWorld():
         self.water_penalty = water_penalty
         self.end_reward = end_reward
         self.river_restart = river_restart 
+        self.thetas_in = thetas_in
+        self.thetas_out = thetas_out
         
+      
         #set-up grids and their colors in a dictionary
         basegrid = build_grid(d = d, baseline_penalty = baseline_penalty,
                             water_penalty = water_penalty, end_reward = end_reward,
@@ -67,6 +75,15 @@ class LakeWorld():
         # missingness settings
         self.fog_i_range = fog_i_range
         self.fog_j_range = fog_j_range
+        
+        # some checks        
+        assert len(self.current_state) == len(thetas_in), "thetas_in length mismatch"
+        assert len(self.current_state) == len(thetas_out), "thetas_out length mismatch"
+        assert p_wind_i >= 0 and p_wind_i <= 1, "p_wind_i not a probability"
+        assert p_wind_j >= 0 and p_wind_j <= 1, "p_wind_i not a probability"
+        
+        
+        
         
     
     def set_state(self,state): 
@@ -137,6 +154,52 @@ class LakeWorld():
             terminal = False
         
         return(reward, self.current_state, terminal)
+    
+    
+    def Mfog(self):
+        """
+        This missing data mechanism 'casts a fog' over some rectangular region 
+        of the grid so that within this region, missingness has one rate and 
+        outside this region, another. This is MCAR if (x,y) are always observed 
+        (first two elements of each theta are 0) and only color is missing.
+        Else it is NMAR.
+        
+        
+        Parameters
+        ----------
+        state : np.array
+
+        i_range : a tuple (a,b) for lower and upper bounds of fog in y direction
+       
+        j_range : a tuple (c,d) for lower and upper bounds of fog in x direction
+            DESCRIPTION.
+         
+        thetas_in : np array of same length as state with elements in [0,1]
+      
+        thetas_out : np array of same length as state with elements in [0,1]
+
+        Returns
+        -------
+        po_state : a copy of state, possibly with some elements set to np.nan
+     
+        """
+        # default to not being in the region
+        inregion = False
+        
+        i_check = np.clip(a=self.current_state[0], 
+                   a_min=self.fog_i_range[0], 
+                   a_max=self.fog_i_range[1]) == self.current_state[0]
+        j_check = np.clip(a=self.current_state[1], 
+                   a_min=self.fog_j_range[0], 
+                   a_max=self.fog_j_range[1]) == self.current_state[1]
+        
+        # check if we're in the fog region or not
+        if i_check and j_check:
+            inregion = True
+            
+        # figure out what thetas to use + apply the MCAR
+        thetas = self.thetas_in if inregion else self.thetas_out
+        return mm.MCAR(self.current_state, thetas)
 
 
 
@@ -365,41 +428,10 @@ def wind(state, d, p_wind_i, p_wind_j):
 
 
     
+    
 #################################################################
 # Environment-Specific Missing Data Mechanism Functions
 #################################################################
-
-def MCAR(state, thetas):
-    """
-    This is the building block missing data function which, 
-    given the current state and a vector of thetas of the same length,
-    independently and randomly sets each element i of the vector to missing
-    with Bernoulli(theta_i). That is, thetas represent the probability
-    of being missing so 
-    
-        * \theta_i = 0   for always observed
-        * \theta_i = 1   for never observed
-
-    Parameters
-    ----------
-    state : np array
-    thetas : np array of same length as state with elements in [0,1]
-
-    Returns
-    -------
-    po_state : a copy of state, possibly with some elements set to np.nan
-    """
-    assert len(state) == len(thetas), "theta-state length mismatch"
-    
-    # make a copy to stay safe: "partially-observed state"
-    po_state = np.array(state).copy().astype(float)
-    
-    # generate bernoullis and mask relevant elements
-    mask = np.random.binomial(1, thetas).astype(bool)
-    po_state[mask] = np.nan
-    
-    # return our missing-operated state
-    return tuple(po_state)
 
 
 def Mcolor(state, theta_dict): 
@@ -441,56 +473,12 @@ def Mcolor(state, theta_dict):
     c = int(state[2]); thetas_c = theta_dict[c]
     
     # use MCAR
-    return MCAR(state, thetas_c)
+    return mm.MCAR(state, thetas_c)
 
 
 
 
-# If you are in that region, 
-# Mfog is MAR if theta_{1j} = theta_{2j} = 0 (i.e, x,y are observed for all timesteps), else NMAR
-def Mfog(state, i_range, j_range, thetas_in, thetas_out):
-    """
-    This missing data mechanism 'casts a fog' over some
-    rectangular region of the grid so that within this region, 
-    missingness has one rate and outside this region, another.
-    
-    This is MCAR if (x,y) are always observed (first two elements of
-         each thet aare 0) and only color is missing
-    Else it is NMAR
-    
-    
-    Parameters
-    ----------
-    state : np.array
 
-    i_range : a tuple (a,b) for lower and upper bounds of fog in y direction
-   
-    j_range : a tuple (c,d) for lower and upper bounds of fog in x direction
-        DESCRIPTION.
-     
-    thetas_in : np array of same length as state with elements in [0,1]
-  
-    thetas_out : np array of same length as state with elements in [0,1]
-
-    Returns
-    -------
-    po_state : a copy of state, possibly with some elements set to np.nan
- 
-    """
-    assert len(state) == len(thetas_in), "thetas_in length mismatch"
-    assert len(state) == len(thetas_out), "thetas_out length mismatch"
-    
-    # default to not being in the region
-    inregion = False
-    
-    # check if we're in the fog region or not
-    if np.clip(a=state[0], a_min=i_range[0], a_max=i_range[1]) == state[0]:
-        if np.clip(a=state[1], a_min=j_range[0], a_max=j_range[1]) == state[1]:
-            inregion = True
-            
-    # figure out what thetas to use + apply the MCAR
-    thetas = thetas_in if inregion else thetas_out
-    return MCAR(state, thetas)
 
 
 
