@@ -364,63 +364,6 @@ def wind(state, d, p_wind_i, p_wind_j):
     return wind_state
 
 
-def true_move(state, a, gw, gw_colors, p_wind_i, p_wind_j):
-    """
-    Parameters
-    ----------
-    state : (y,x,c) tuple - current true location
-
-    a : an action encoded as a tuple of 0-1's 
-        e.g., (0,1) is up, (1,1) is diagonally up (up then right)
-    
-    gw : grid world encoding rewards
-    
-    gw_colors : grid world encoding colors
-    
-    phi_wind : probability of wind
-
-    Returns
-    -------
-    new_state : a (y,x,c) tuple encoding new state that results
-    from action
-
-    """
-    
-    # if we're at the terminal state, directly teleport to the origin regardless of action or wind
-    if (state[0] == 6) and (state[1] == 7):
-        return (7, 0, 0.0)
-       
-    d  = gw.shape[0]
-    
-    
-    # extract the state quantities
-    i, j, c = tuple(state)
-    
-    # what's our proposed movement?
-    i_new = int(np.clip(a=i-a[1], a_min=0, a_max=d-1))
-    j_new = int(np.clip(a=j+a[0], a_min=0, a_max=d-1))
- 
-    # compile the new state (not color yet)
-    new_state = np.array([i_new, j_new, np.nan])
-    
-    # possibly add wind to the new state
-    new_state = wind(new_state, d, p_wind_i, p_wind_j)
-    
-    # clip so that wind does not push outside of 3 x 3 grid from original state 
-    i_new = int(np.clip(new_state[0], state[0]-1, state[0]+1))
-    j_new = int(np.clip(new_state[1], state[1]-1, state[1]+1))
-    new_state = np.array([i_new, j_new, np.nan])
-    
-    # get color of final new state
-    new_state[2] = int(gw_colors[int(new_state[0]),
-                                 int(new_state[1])])
-   
-    # convert to a tuple
-    new_state = tuple(new_state)
-    
-    return new_state
-    
-    
     
 #################################################################
 # Environment-Specific Missing Data Mechanism Functions
