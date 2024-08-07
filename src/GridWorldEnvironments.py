@@ -1,19 +1,19 @@
 # created 7/16/2024 to move functions generating environment to new file.
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import time
 from matplotlib.patches import Rectangle
 from matplotlib.colors import ListedColormap
 
 import sys, copy, os, shutil
 from tqdm.notebook import tqdm
-import seaborn as sns
 
 import MissingMechanisms as mm
 
 
 #TODO: class specifictation
-#TODO: could make grid itself a class
 class LakeWorld():
     """TODO: class specification """
 
@@ -27,12 +27,19 @@ class LakeWorld():
                  p_wind_i = 0,  #environment stochasticity
                  p_wind_j = 0,
                  p_switch = 0,
+                 MCAR_theta = np.array([0,0,0]), # MCAR parameter
                  fog_i_range = (0,2), #MFOG parameters
                  fog_j_range = (5,7),
-                 thetas_in = 0,  
-                 thetas_out = 0
+                 theta_in = np.array([0,0,0]),  
+                 theta_out = np.array([0,0,0]),
+                 color_theta_dict = {0: np.array([0,0,0]), #MCOLOR parameters
+                               1: np.array([0,0,0]),
+                               2: np.array([0,0,0])},
+                 action_dict = "default",
+                 allow_stay_action = True
                  ):
         
+        # Save basic grid parameters
         self.d = d
         self.colors = colors
         self.p_switch = p_switch
@@ -42,10 +49,7 @@ class LakeWorld():
         self.water_penalty = water_penalty
         self.end_reward = end_reward
         self.river_restart = river_restart 
-        self.thetas_in = thetas_in
-        self.thetas_out = thetas_out
         
-      
         #set-up grids and their colors in a dictionary
         basegrid = build_grid(d = d, baseline_penalty = baseline_penalty,
                             water_penalty = water_penalty, end_reward = end_reward,
@@ -57,38 +61,58 @@ class LakeWorld():
         floodgridcol = make_gw_colors(floodgrid)
         self.environments = {0 : [basegrid, basegridcol],
                              1 : [floodgrid, floodgridcol]}
-     
         self.environment_options = [0,1]#0 for basegrid, 1 for floodgrid
         self.current_environment = 1
         
-        # states
-        self.state_value_lists = [list(range(d)), list(range(d)), colors]
+        # set-up possible state list
+        self.state_value_lists = [list(range(d)), list(range(d)), colors] #Note: order matters
         
-        # default to initializing at start
+        # set starting state
         i,j = start_location
         self.current_state = (i,j, self.environments[self.current_environment][1][i,j])
         
         # wind settings
+        assert p_wind_i >= 0 and p_wind_i <= 1, "p_wind_i not a probability"
+        assert p_wind_j >= 0 and p_wind_j <= 1, "p_wind_i not a probability"
         self.p_wind_i = p_wind_i
         self.p_wind_j = p_wind_j
         
         # missingness settings
+        assert len(self.current_state) == len(theta_in), "theta_in length mismatch"
+        assert len(self.current_state) == len(theta_out), "theta_out length mismatch"
+        self.MCAR_theta = MCAR_theta
         self.fog_i_range = fog_i_range
         self.fog_j_range = fog_j_range
-        
-        # some checks        
-        assert len(self.current_state) == len(thetas_in), "thetas_in length mismatch"
-        assert len(self.current_state) == len(thetas_out), "thetas_out length mismatch"
-        assert p_wind_i >= 0 and p_wind_i <= 1, "p_wind_i not a probability"
-        assert p_wind_j >= 0 and p_wind_j <= 1, "p_wind_i not a probability"
-        
-        
-        
-        
-    
+        self.theta_in = theta_in
+        self.theta_out = theta_out
+        self.color_theta_dict = color_theta_dict
+       
+        # actions: initialize default full range of actions with descriptions or use whatever user gives
+        self.allow_stay_action = allow_stay_action
+        if action_dict == "default":
+            self.action_dict = {
+                                (0, 1) : "up", 
+                                (1, 1) : "diag-right-up", 
+                                (1, 0) : "right", 
+                                (1, -1): "diag-right-down", 
+                                (0, -1) : "down", 
+                                (-1, -1) : "diag-left-down",
+                                (-1, 0) : "left", 
+                                (-1, 1): "diag-left-up"}
+            if allow_stay_action:
+                self.action_dict[(0,0)] = "stay"
+            
+        else: 
+            self.action_dict = action_dict
+            
+      
     def set_state(self,state): 
         """Allow user to manually set the state."""
         self.current_state = state
+        
+    def get_action_list(self):
+        """Get possible actions in a list"""
+        return list(self.action_dict.keys())
 
     def get_reward(self):
         """ Get reward from current state """
@@ -156,6 +180,10 @@ class LakeWorld():
         return(reward, self.current_state, terminal)
     
     
+    def MCAR(self):
+        """Wrapper which applies MCAR function to current state"""
+        return(mm.MCAR(self.current_state, self.MCAR_theta))
+    
     def Mfog(self):
         """
         This missing data mechanism 'casts a fog' over some rectangular region 
@@ -163,7 +191,6 @@ class LakeWorld():
         outside this region, another. This is MCAR if (x,y) are always observed 
         (first two elements of each theta are 0) and only color is missing.
         Else it is NMAR.
-        
         
         Parameters
         ----------
@@ -174,9 +201,9 @@ class LakeWorld():
         j_range : a tuple (c,d) for lower and upper bounds of fog in x direction
             DESCRIPTION.
          
-        thetas_in : np array of same length as state with elements in [0,1]
+        theta_in : np array of same length as state with elements in [0,1]
       
-        thetas_out : np array of same length as state with elements in [0,1]
+        theta_out : np array of same length as state with elements in [0,1]
 
         Returns
         -------
@@ -197,15 +224,175 @@ class LakeWorld():
         if i_check and j_check:
             inregion = True
             
-        # figure out what thetas to use + apply the MCAR
-        thetas = self.thetas_in if inregion else self.thetas_out
-        return mm.MCAR(self.current_state, thetas)
+        # figure out what theta to use + apply the MCAR
+        theta = self.theta_in if inregion else self.theta_out
+        return mm.MCAR(self.current_state, theta)
+    
+    
+    def Mcolor(self): 
+        """
+        Applies MCAR function with a different theta vector for each color
+        
+        If the third element of each theta entry is 0 so that
+        color can never be missing, then this is MAR. Else, this is NMAR
+        
+        Examplantion: x,y|c are missing at random indepenent of the true
+        value of (x,y) but c|x,y will depend on the missing value of c
+        if color is missing. E.g., if red is has high missing rates
+        and green has low missing rates, then we may assess the probability
+        of red|x,y to be lower than it actually is just because of higher missing
+        rate.
+        
+        Note: this becomes especially relevant when we have stochastic
+        water so that color is random...some areas of our grid example have
+        constant color, which shouldn't be hard to learn ( maybe depending
+        a bit on initialization )
+        
+        Parameters
+        ----------
+        state : np.array
+        
+        theta_dict : dictionary with keys "0","1","2" and values
+            each an np.array of same length as state containing
+            elements in [0,1]
+
+        Returns
+        -------
+        po_state : a copy of state, possibly with some elements set to np.nan
+        """
+        # query true color is + get the corresponding theta_c vector
+        c_ix = int(self.current_state[2])
+        theta_c = self.color_theta_dict[c_ix]
+        # apply MCAR
+        return mm.MCAR(self.current_state, theta_c)
+    
+    
+    
+
+##################################
+# Logger 
+##################################
+
+class LakeWorldLogger():
+    '''
+    Creates and maintains a DataFrame to log results
+    
+    Per episode: log makes it possible to calculate
+        1. Mean reward per episode, # of times we landed in the river per episode, # of steps per episode.
+        2. Counts of fully-observed, 1-missing, 2-missing, and 3-missing states per episode.       
+        3. Wall clock time per episode.
+        
+        
+    '''
+    def __init__(self, per_timestep = True):
+        
+        # for episode logs
+        self.logs = pd.DataFrame(data=None, 
+                            columns=["total_reward",
+                                     "steps_river",
+                                     "num_steps", 
+                                     "counts_0miss", 
+                                     "counts_1miss",
+                                     "counts_2miss", 
+                                     "counts_3miss",
+                                     "wall_clock_time"])
+        
+        if per_timestep:
+            self.t_step_logs = pd.DataFrame(data=None, columns=["t_step",
+                                                                "action_i", 
+                                                                "action_j", 
+                                                                "true_i", 
+                                                                "true_j", 
+                                                                "true_c", 
+                                                                "obs_i", 
+                                                                "obs_j",
+                                                                "obs_c", 
+                                                                "reward", 
+                                                                "wall_clock_time"])
+    ##########################
+    # EPISODE TRACKING
+    ##########################
+    def start_epsiode(self):
+        """Resets all counters to 0"""
+        self.total_reward = 0
+        self.steps_river = 0
+        self.num_steps = 0,
+        self.counts_0miss = 0,
+        self.counts_1miss = 0,
+        self.counts_3miss = 0,
+        self.start_time = time.time()
+        
+    def update_epsisode_log(self, env, new_pobs_state, reward):
+        """
+        Update the various trackers that have new info per step
+        """
+        
+        self.num_steps += 1
+        
+        self.total_reward += reward
+        
+        if reward == env.water_penalty:
+            self.steps_river += 1
+            
+        num_nan = np.isnan(new_pobs_state).sum() 
+        if num_nan == 0:
+            self.counts_0miss += 1
+        elif num_nan == 1:
+            self.counts_1miss += 1
+        elif num_nan == 2:
+            self.counts_2miss += 1
+        elif num_nan == 3:
+            self.counts_3miss += 1
+            
+                    
+    def finish_and_reset_epsiode(self):
+        """Add this episode to overall dataframe and reset things so that
+        can start logging a new episode"""
+        
+        # get duration
+        wall_clock_time = time.time() - self.start_time 
+        
+        # update our dataframe
+        row = [self.total_reward, self.steps_river, self.num_steps, 
+               self.counts_0miss, self.counts_1miss, self.counts_2miss, self.counts_3miss,
+               wall_clock_time]
+        
+        # add to dataframe
+        self.logs.loc[len(self.logs.index)] = row
+        
+        #start a new episode
+        self.start_episode()
+        
+        
+    ##########################
+    # TIMESTEP TRACKING
+    ##########################
+    def start_t_step(self, t_step): 
+        self.start_t_step = time.time()
+        self.t_step_row = [t_step]
+    
+    def finish_t_step(self, env, action, new_true_state, new_pobs_state, reward):
+        
+        self.t_step_row += [action[0], action[1]]
+        self.t_step_row += [elem for elem in new_true_state]
+        self.t_step_row += [new_pobs_state[0], new_pobs_state[1], new_pobs_state[2], reward]
+        self.t_step_row += [time.time() - self.start_t_step]
+        self.t_step_logs.loc[len(self.t_step_logs.index)] = self.t_step_row
+        
+      
+        
+        
+        
+        
+ 
+        
+            
 
 
 
-####################
-# Environment Set-up
-####################
+####################################
+# Helpers used above
+####################################
 
 def build_grid(d, baseline_penalty = -1, 
                 water_penalty = -10,
@@ -364,29 +551,6 @@ def make_gw_colors(gw):
     return gw_colors
 
 
-####################
-# Action Set-up
-####################
-
-# Global Parameters 
-ACTION_DESCS = {(0, 0) : "stay", 
-                (0, 1) : "up", 
-                (1, 1) : "diag-right-up", 
-                (1, 0) : "right", 
-                (1, -1): "diag-right-down", 
-                (0, -1) : "down", 
-                (-1, -1) : "diag-left-down",
-                (-1, 0) : "left", 
-                (-1, 1): "diag-left-up"}
-
-# just to make sure we can get it quickly
-def load_actions(allow_stay_action):
-    if allow_stay_action:
-        return ACTION_DESCS.copy()
-    else:
-        return {k:v for k,v in ACTION_DESCS.items() if k != (0,0)}
-
-
 ##############################################
 # Functions which implement consequence of actions in the True State Space
 ##############################################
@@ -425,65 +589,6 @@ def wind(state, d, p_wind_i, p_wind_j):
         
     # just return our state
     return wind_state
-
-
-    
-    
-#################################################################
-# Environment-Specific Missing Data Mechanism Functions
-#################################################################
-
-
-def Mcolor(state, theta_dict): 
-    """
-    Applied MCAR function  (see above) with a different theta
-    for each color
-    
-    If the third element of each theta entry is 0 so that
-    color can never be missing, then this is MAR. Else, this is NMAR
-    
-    Examplantion: x,y|c are missing at random indepenent of the true
-    value of (x,y) but c|x,y will depend on the missing value of c
-    if color is missing. E.g., if red is has high missing rates
-    and green has low missing rates, then we may assess the probability
-    of red|x,y to be lower than it actually is just because of higher missing
-    rate.
-    
-    Note: this becomes especially relevant when we have stochastic
-    water so that color is random...some areas of our grid example have
-    constant color, which shouldn't be hard to learn ( maybe depending
-    a bit on initialization )
-    
-    
-    Parameters
-    ----------
-    state : np.array
-    
-    theta_dict : dictionary with keys "0","1","2" and values
-        each an np.array of same length as state containing
-        elements in [0,1]
-
-    Returns
-    -------
-    po_state : a copy of state, possibly with some elements set to np.nan
-  
-    """
-    
-    # query what our true color is + get the corresponding thetas_c vector
-    c = int(state[2]); thetas_c = theta_dict[c]
-    
-    # use MCAR
-    return mm.MCAR(state, thetas_c)
-
-
-
-
-
-
-
-
-
-
 
 
 

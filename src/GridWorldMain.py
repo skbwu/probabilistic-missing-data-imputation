@@ -13,16 +13,21 @@ import os
 import GridWorldEnvironments as gwe # added 7/16/2024
 import ImputerTools as impt
 import RLTools as rlt
+import MissingMechanisms as mm
+
+
+#TODO: document requirements for loggers and environments
+#TODO: make this document general and move specifics of LakeWorld environment to a run script
 
 # create a master function
 def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
            p_wind_i, p_wind_j, # float, up-down/left-right wind frequency, {0.0, 0.1, 0.2}. INTENDED EQUAL!
            allow_stay_action, #4/16/2024 addition 
            env_missing, # environment-missingness governor "MCAR", "Mcolor", "Mfog"
-           thetas, # np.array, MCAR, same theta_i values {0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5}
-           thetas_in, # np.array, Mfog, in: (0.5, 0.5, 0.5) + (0.25, 0.25, 0.25)
-           thetas_out, # np.array, Mfog, out: (0.0, 0.0, 0.0) + (0.1, 0.1, 0.1)
-           theta_dict, # dict with keys {0, 1, 2} corresponding to a np.array each.
+           MCAR_theta, # np.array, MCAR, same theta_i values {0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5}
+           theta_in, # np.array, Mfog, in: (0.5, 0.5, 0.5) + (0.25, 0.25, 0.25)
+           theta_out, # np.array, Mfog, out: (0.0, 0.0, 0.0) + (0.1, 0.1, 0.1)
+           color_theta_dict, # dict with keys {0, 1, 2} corresponding to a np.array each.
            impute_method, # "last_fobs", "random_action", "missing_state", "joint", "mice"
            action_option, # voting1, voting2, averaging
            K, #number of multiple imputation chains
@@ -35,49 +40,51 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
            seed, # randomization seed
            verbose=False, # intermediate outputs or nah?
            river_restart=False,
-           missing_as_state_value = -1): # option to force agent back to starting point if fall into river. 7/16/2024. 
-    
+           missing_as_state_value = -1,
+           testmode = False): # option to force agent back to starting point if fall into river. 7/16/2024. 
+
+    if testmode:
+        assert K >= 1 or K is None
+        assert num_cycles >= 1 or num_cycles is None
+
     # For convenience
     MImethods = ["joint", "mice", "joint-conservative"]
   
-    ###############################################################
-    ##### CREATING ENVIRONMENT + SETTING THE SEED #################
-    ###############################################################
-    #assert K >= 1 or K is None
-    #assert num_cycles >= 1 or num_cycles is None
-   
     # initialize environment
     env = gwe.LakeWorld(d = 8,
                         colors = [0,1,2],
                         baseline_penalty = -1, 
                         water_penalty = -10,
                         end_reward = 100,
-                        fog_i_range = (0,2),
-                        fog_j_range = (5,7),
+                        start_location = (7, 0),
+                        terminal_location = (6, 7),
                         p_wind_i = p_wind_i,
                         p_wind_j = p_wind_j,
                         p_switch = p_switch,
-                        start_location = (7, 0),
-                        terminal_location = (6, 7))
+                        fog_i_range = (0,2),
+                        fog_j_range = (5,7),
+                        MCAR_theta = MCAR_theta,
+                        theta_in = theta_in,
+                        theta_out = theta_out,
+                        color_theta_dict = color_theta_dict,
+                        action_dict = "default",
+                        allow_stay_action = allow_stay_action
+                        )
+    # Get other environment attributes
+    action_list = env.get_action_list()
+    state_value_lists = env.state_value_lists
     
-    # fog range - fixed.
-    i_range, j_range = (0, 2), (5, 7)
-
     # set our seed for use in multiple trials
     np.random.seed(seed)
+    
+    # Set-up logger
+    logger = gwe.LakeWorldLogger() #***
+   
     
     ###############################################################
     ##### INITIALIZING START OF SIMULATIONS + DATA STRUCTURES #####
     ###############################################################
-    
-    # load the possible actions list, specifying whether stay in place allowed
-    action_descs = gwe.load_actions(allow_stay_action = allow_stay_action)
-    action_list = list(action_descs.keys())
-    
-    # specify a state_value_list - note order matters 
-    state_value_lists = env.state_value_lists
-    
-    # initialize our Q matrix: {((i, j, color), (a1, a2))}
+    # initialize Q matrices
     if impute_method == "missing_state":
         Q = impt.init_Q(state_value_lists,
                        action_list, 
@@ -89,60 +96,30 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
                        include_missing_as_state=False)
 
     
-    # initialize Transition matrices
+    # Initialize Transition matrices
     Tstandard = impt.init_Tstandard(state_value_lists = state_value_lists,
                                    action_list = action_list, init_value = 0.0)
     Tmice = impt.init_Tmice(state_value_lists = state_value_lists,
                             action_list = action_list, init_value = 0.0)
 
-    #  Assume fully-observed initial state and initialize first obs state and first imp state
+    # Assume fully-observed initial state and initialize first obs state and first imp state
+    # List version is only used if doing MI method
     last_pobs_state, last_imp_state = env.current_state, env.current_state
-
-    # if doing multiple imputation method, initilize state list
-    if impute_method in MImethods:
-        last_imp_state_list = [env.current_state] * int(K)
-
-    # initialize variable for our last fully-obs-state
+    last_imp_state_list = [env.current_state] * int(K) 
     last_fobs_state = env.current_state
 
-    '''
-    DataFrame to log our results for this simulation:
-    1. Mean reward per episode, # of times we landed in the river per episode, # of steps per episode.
-    2. Counts of fully-observed, 1-missing, 2-missing, and 3-missing states per episode.
-    3. Wall clock time per episode.
-    '''
-    # ALL METRICS ARE PER EPISODE!
-    logs = pd.DataFrame(data=None, columns=["total_reward", "steps_river", "path_length", 
-                                            "counts_0miss", "counts_1miss", "counts_2miss", "counts_3miss",
-                                            "wall_clock_time"])
     
-    # 4/25/2024: PER-TIMESTEP LOGGING TOO!
-    t_step_logs = pd.DataFrame(data=None, columns=["t_step", "action_i", "action_j", 
-                                                   "true_i", "true_j", "true_c", 
-                                                   "obs_i", "obs_j", "obs_c", 
-                                                   "reward", "wall_clock_time"])
-
-    # things we want to store PER EPISODE
-    total_reward, steps_river, path_length = 0, 0, 0
-    counts_0miss, counts_1miss, counts_2miss, counts_3miss = 0, 0, 0, 0
-    wall_clock_time = None
-
-    # start our timer FOR THIS EPISODE
-    start_time = time.time()
-
+   
     ###############################################################
     ##### RUNNING SIMULATIONS FOR EACH TIMESTEP ###################
     ###############################################################
 
-    # for each timestep ...
+    logger.start_epsiode()
+
     for t_step in range(max_iters):
         
-        # start a timer for this TIMESTEP!
-        start_time_t_step = time.time()
-        
-        # create a row to store our desired TIMESTEP-SPECIFIC METRICS TOO!
-        t_step_row = [t_step]
-
+        logger.start_t_step()
+    
         # Choose action A from S using policy-derived from Q, possibly e-greedy
         action = rlt.get_action(last_imp_state = last_imp_state, 
                        last_imp_state_list = last_imp_state_list,
@@ -152,40 +129,18 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
                        epsilon = epsilon,
                        action_option = action_option)
              
-        # add to our logs FOR THIS TIMESTEP!
-        t_step_row += [action[0], action[1]]
-        
         # Take action A, observe R, S'
         reward, new_true_state, terminal = env.step(action) #environment stochasticity handled internally
-        
-        # record our NEW TRUE STATE
-        t_step_row += [new_true_state[0], new_true_state[1], new_true_state[2]]
-        # update our reward counter + river counters
-        total_reward += reward
-        if reward == env.water_penalty:
-            steps_river += 1
-
-        ###############################################
-        # Apply missingness mechanism to generate our new partially observed state
-        ###############################################
-        # simulate our partially-observed mechanism.
-        if env_missing == "MCAR":
-            new_pobs_state = gwe.MCAR(new_true_state, thetas)
-        elif env_missing == "Mcolor":
-            new_pobs_state = gwe.Mcolor(new_true_state, theta_dict)
-        elif env_missing == "Mfog":
-            new_pobs_state = gwe.Mfog(new_true_state, i_range, j_range, thetas_in, thetas_out)
+        assert new_true_state == env.current_state  #TODO: temp - just to check when run this
+       
+        # Apply missingness mechanism to generate new partially observed state
+        if hasattr(env, env_missing):
+            miss_method = getattr(env, env_missing)
+            new_pobs_state = miss_method()
         else:
-            raise Exception("The given env_missing mode is not supported.")
-        
-        # record our NEW POBS STATE + the reward
-        t_step_row += [new_pobs_state[0], new_pobs_state[1], new_pobs_state[2], reward]
-        
-        ###############################################
-        # IMPUTATION
-        # make imputation for the new_pobs_state, if not everything is observed.
-        # else just pass on the observed state
-        ###############################################   
+            raise Exception(f"env does not have a missing method called {env_missing}")
+          
+        # Impute for the new_pobs_state, if needed
         new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method = impute_method,
                            new_pobs_state  = new_pobs_state, last_fobs_state = last_fobs_state, 
                            last_A = action, 
@@ -193,18 +148,13 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
                            K = K, Tstandard = Tstandard, Tmice = Tmice, num_cycles = num_cycles,
                            missing_as_state_value = missing_as_state_value)
        
-        ######################################
         # Q update (if permitted)
-        ######################################
         if impute_method in MImethods:
             Q  = impt.updateQ_MI(Q, 
                                 Slist = last_imp_state_list, 
                                 new_Slist = new_imp_state_list, 
                                 A = action, action_list = action_list,
                                 reward = reward, alpha = alpha, gamma = gamma)
-            
-        # if we have random_action method, then we cannot update unless nothing missing in 
-        # last and current state
         elif impute_method != "random_action":
             Q = impt.update_Q(Q, last_imp_state, action, action_list,
                               reward, new_imp_state, alpha, gamma)
@@ -213,9 +163,7 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
                   if ~np.any(np.isnan(last_pobs_state)):
                      Q = impt.update_Q(Q, last_imp_state, action, action_list, reward, new_imp_state, alpha, gamma)
 
-        ######################################
         # T update (if needed)
-        ######################################
         if impute_method in MImethods:
             if impute_method == "mice":
                 impt.Tmice_update(Tmice, 
@@ -236,74 +184,35 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
                                             A = action,
                                             new_Slist = new_imp_state_list)
 
-        # Other updates
-        ##########################################
-        # check whether our last_fobs_state can be updated
+        
+        # check whether last_fobs_state can be updated
         if ~np.any(np.isnan(new_pobs_state)):
             last_fobs_state = copy.deepcopy(new_pobs_state)
 
-        # now that we have updated Q and T functions
-        # update true_state, pobs_state, last_imp_state, last_imp_state_list
-        # as 'current state' for for the next round
+        # now that we have updated Q and T, update 'lasts' for next round
         last_pobs_state = copy.deepcopy(new_pobs_state)
         last_imp_state = copy.deepcopy(new_imp_state)
         if impute_method in MImethods:
             last_imp_state_list = copy.deepcopy(new_imp_state_list)
         
-        # LOGGING
-        #########
-        # update our missing data counters  #TODO: generalize
-        if np.isnan(new_pobs_state).sum() == 0:
-            counts_0miss += 1
-        elif np.isnan(new_pobs_state).sum() == 1:
-            counts_1miss += 1
-        elif np.isnan(new_pobs_state).sum() == 2:
-            counts_2miss += 1
-        elif np.isnan(new_pobs_state).sum() == 3:
-            counts_3miss += 1
 
-        # update our path-length counter
-        path_length += 1
-
-        # also see if we hit the terminal state
-        if terminal:
-
-            # end our timer + record time elapsed FOR THIS EPISODE!
-            end_time = time.time()
-            wall_clock_time = end_time - start_time
-
-            # update our dataframe
-            row = [total_reward, steps_river, path_length, 
-                   counts_0miss, counts_1miss, counts_2miss, counts_3miss,
-                   wall_clock_time]
-            logs.loc[len(logs.index)] = row
-
-            # reset our counter variables per EPISODE
-            total_reward, steps_river, path_length = 0, 0, 0
-            counts_0miss, counts_1miss, counts_2miss, counts_3miss = 0, 0, 0, 0
-            wall_clock_time = None
-
-            # reset our timer, too
-            start_time = time.time()
-
-            
-        # end the timer for this TIMESTEP!
-        end_time_t_step = time.time()
+        # LOGGING 
+        logger.update_epsisode_log(env, new_pobs_state, reward)
+        logger.finish_t_step(env, action, new_true_state, new_pobs_state, reward)
         
-        # wrap up row of TIMESTEP-SPECIFIC METRICS, add to our dataframe
-        t_step_row += [end_time_t_step - start_time_t_step]
-        t_step_logs.loc[len(t_step_logs.index)] = t_step_row
-            
         # status update?
         if verbose == True:
-            s = 20
-            if (t_step+1) % 5 == 0 and len(logs.index) >= 20:
+            if (t_step+1) % 5 == 0 and len(logger.logs.index) >= 20:
                 clear_output(wait=True)
-                print(f"Timestep: {t_step+1}, Past 20 Mean Epi. Sum Reward: {np.round(logs.loc[-20:].total_reward.mean(), 3)}, Fin. Episodes: {len(logs.index)}, Past 20 Mean Path Length: {np.round(logs.loc[-20:].path_length.mean(), 3)}")
+                print(f"""Timestep: {t_step+1}, Past 20 Mean Epi. Sum Reward: {np.round(logger.logs.loc[-20:].total_reward.mean(), 3)}, Fin. Episodes: {len(logger.logs.index)}, Past 20 Mean Path Length: {np.round(logger.logs.loc[-20:].num_steps.mean(), 3)}""")
             elif (t_step+1) % 5 == 0:
                 clear_output(wait=True)
                 print(f"Timestep: {t_step+1}")
-                print(f"Reward This Episode: {total_reward}")
+                print(f"Total Reward So Far This Episode: {logger.total_reward}")
+                
+        if terminal:
+            logger.finish_and_reset_epsiode()            
+        
     
     ###############################################################
     ##### SAVING OUR LOGS FILE TO A .CSV OUTPUT ###################
@@ -326,19 +235,19 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
     if env_missing == "MCAR":
 
         # all theta_i are the same, just record what the theta was.
-        fname += f"_theta={thetas[0]}"
+        fname += f"_MCAR_theta={MCAR_theta[0]}"
 
     # record the Mcolor variables
     elif env_missing == "Mcolor":
 
         # only thing that is differential/changing is whether the last value is 0.0 or something else.
-        fname += f"_t-color={theta_dict[0][1]}+{theta_dict[0][2]}"
+        fname += f"_t-color={color_theta_dict[0][1]}+{color_theta_dict[0][2]}"
 
     # record the Mfog variables    
     elif env_missing == "Mfog":
 
         # record fog-in and fog-out theta values (equal for each component)
-        fname += f"_t-in={thetas_in[0]}_t-out={thetas_out[0]}"
+        fname += f"_t-in={theta_in[0]}_t-out={theta_out[0]}"
 
     # else, throw a hissy fit
     else:
@@ -363,8 +272,8 @@ def runner(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
         os.mkdir(f"results/{fname}")
 
     # save the EPISODES + STEPWISE log files to a .csv
-    logs.to_csv(f"results/{fname}/episodic_seed={seed}.csv", index=False)
-    t_step_logs.to_csv(f"results/{fname}/stepwise_seed={seed}.csv", index=False)
+    logger.logs.to_csv(f"results/{fname}/episodic_seed={seed}.csv", index=False)
+    logger.t_step_logs.to_csv(f"results/{fname}/stepwise_seed={seed}.csv", index=False)
 
     # save the Q matrix to a .pickle
     with open(f"results/{fname}/Q_seed={seed}.pickle", "wb") as file:
