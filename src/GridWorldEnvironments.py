@@ -271,8 +271,8 @@ class LakeWorld():
         """ Produce the part of the filename that concerns environment settings
         or missingness mechanism settings, which may be specific to environment"""
         
-        # start our filename: p_switch = PS, PW = p_wind_{i,j}, MM = missingness mechanism
-        fname = f"PS={self.p_switch}_PW={self.p_wind_i}_MM={env_missing}"
+        # start our filename: PW = p_wind_{i,j}, MM = missingness mechanism #NOTE: p_switch removed Aug 7 2024
+        fname = f"PW={self.p_wind_i}_MM={env_missing}"
     
         # record whether stay in place action was allowed or not
         if self.allow_stay_action:
