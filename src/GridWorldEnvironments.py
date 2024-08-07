@@ -203,20 +203,6 @@ def build_grid(d, baseline_penalty = -1,
     return(gw)
 
 
-def get_state_value_lists(d, colors):  #TODO: deprecate
-    """
-    Given dimension of grid and a list of colors,
-    create state_value_lists, a list of lists where each sublist
-    gives the possible values of that dimension of the state
-    
-    In particular, order is 1:d, 1:d and then the list of colors
-    """
-    state_value_lists = [list(range(d)),
-                      list(range(d)),
-                      colors]
-    
-    return(state_value_lists)
-
 def visualize_reward_grid(gw, ax):
     """
     Use heatmap to visualize (mean) rewards of the given grid on the 

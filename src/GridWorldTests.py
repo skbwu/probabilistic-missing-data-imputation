@@ -11,6 +11,21 @@ import GridWorldEnvironments as gwe
 import RLTools as rlt
 
 
+def get_state_value_lists(d, colors):  #don't need this in main anymore but useful here
+    """
+    Given dimension of grid and a list of colors,
+    create state_value_lists, a list of lists where each sublist
+    gives the possible values of that dimension of the state
+    
+    In particular, order is 1:d, 1:d and then the list of colors
+    """
+    state_value_lists = [list(range(d)),
+                      list(range(d)),
+                      colors]
+    
+    return(state_value_lists)
+
+
 def test_miss_mech():
     """
     Some very basic sanity check tests. Could do more to make sure
@@ -84,9 +99,9 @@ def test_imputers():
     
     action_list = [(0,0),(0,1)]
    
-    Tstandard = impt.init_Tstandard(gwe.get_state_value_lists(2, [4,5]),
+    Tstandard = impt.init_Tstandard(get_state_value_lists(2, [4,5]),
                                    action_list,  0.5)
-    Tmice = impt.init_Tmice(gwe.get_state_value_lists(2, [4,5]),
+    Tmice = impt.init_Tmice(get_state_value_lists(2, [4,5]),
                                    action_list)
 
     S = (1,1,4)
@@ -184,9 +199,9 @@ def test_Tupdaters():
    
     #set-up
     action_list = [(0,0),(0,1)]
-    Tstandard = impt.init_Tstandard(gwe.get_state_value_lists(2,[4,5]),
+    Tstandard = impt.init_Tstandard(get_state_value_lists(2,[4,5]),
                                    action_list, 0)
-    Tmice = impt.init_Tmice(gwe.get_state_value_lists(2,[4,5]),
+    Tmice = impt.init_Tmice(get_state_value_lists(2,[4,5]),
                                    action_list, 0)
     true_state = (0,0,4)
     pobs_state = (0, np.nan, 4)
@@ -245,7 +260,7 @@ def test_Tupdaters():
  
 def test_Qupdate():
     
-    Q = impt.init_Q(gwe.get_state_value_lists(3, [0,1,2]),
+    Q = impt.init_Q(get_state_value_lists(3, [0,1,2]),
                    [(0,0),(0,1)]
                    )
     alpha = 1; gamma = 1
@@ -487,13 +502,13 @@ def test_dummy_miss_pipeline(impute_method):
     action_list = [(0,0),(0,1)]
     
     #init stuff
-    Q = impt.init_Q(gwe.get_state_value_lists(d, colors),
+    Q = impt.init_Q(get_state_value_lists(d, colors),
                    action_list
                    )
-    Tstandard = impt.init_Tstandard(gwe.get_state_value_lists(d, colors),
+    Tstandard = impt.init_Tstandard(get_state_value_lists(d, colors),
                                    action_list,
                                    init_T_val)
-    Tmice = impt.init_Tmice(gwe.get_state_value_lists(d, colors),
+    Tmice = impt.init_Tmice(get_state_value_lists(d, colors),
                                    action_list,
                                    init_T_val)
     
