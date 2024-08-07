@@ -1,4 +1,3 @@
-# created 7/16/2024 to move functions generating environment to new file.
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -6,14 +5,9 @@ import seaborn as sns
 import time
 from matplotlib.patches import Rectangle
 from matplotlib.colors import ListedColormap
-
-import sys, copy, os, shutil
-from tqdm.notebook import tqdm
-
 import MissingMechanisms as mm
 
 
-#TODO: class specifictation
 class LakeWorld():
     """TODO: class specification """
 
@@ -104,6 +98,9 @@ class LakeWorld():
             
         else: 
             self.action_dict = action_dict
+            
+        # how to encode missing as state
+        self.missing_as_state_value = -1
             
       
     def set_state(self,state): 
@@ -271,8 +268,8 @@ class LakeWorld():
         """ Produce the part of the filename that concerns environment settings
         or missingness mechanism settings, which may be specific to environment"""
         
-        # start our filename: PW = p_wind_{i,j}, MM = missingness mechanism #NOTE: p_switch removed Aug 7 2024
-        fname = f"PW={self.p_wind_i}_MM={env_missing}"
+        # start our filename: p_switch = PS, PW = p_wind_{i,j}, MM = missingness mechanism
+        fname = f"PS={self.p_switch}_PW={self.p_wind_i}_MM={env_missing}"
     
         # record whether stay in place action was allowed or not
         if self.allow_stay_action:
