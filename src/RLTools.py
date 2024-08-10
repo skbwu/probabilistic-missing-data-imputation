@@ -201,60 +201,11 @@ def run_RL(env, logger,
            max_iters, # how many iterations are we going for?
            seed, # randomization seed
            verbose=False, # intermediate outputs or nah?
-           missing_as_state_value = -1,
-           testmode = False): 
+           missing_as_state_value = -1): 
     """
-    TODO: DOCUMENTATION
-
-    Parameters
-    ----------
-    env : TYPE
-        DESCRIPTION.
-    logger : TYPE
-        DESCRIPTION.
-    env_missing : TYPE
-        DESCRIPTION.
-    # environment-missingness governor "MCAR" : TYPE
-        DESCRIPTION.
-    "Mcolor" : TYPE
-        DESCRIPTION.
-    "Mfog"           impute_method : TYPE
-        DESCRIPTION.
-    # "last_fobs" : TYPE
-        DESCRIPTION.
-    "random_action" : TYPE
-        DESCRIPTION.
-    "missing_state" : TYPE
-        DESCRIPTION.
-    "joint" : TYPE
-        DESCRIPTION.
-    "mice"           action_option : TYPE
-        DESCRIPTION.
-    # voting1 : TYPE
-        DESCRIPTION.
-    voting2 : TYPE
-        DESCRIPTION.
-    averaging           K : TYPE
-        DESCRIPTION.
-    #number of multiple imputation chains           num_cycles : TYPE
-        DESCRIPTION.
-    #number of cycles used in Mice           epsilon : TYPE
-        DESCRIPTION.
-    # epsilon-greedy governor           alpha : TYPE
-        DESCRIPTION.
-    # learning rate           gamma : TYPE
-        DESCRIPTION.
-    # discount factor           max_iters : TYPE
-        DESCRIPTION.
-    # how many iterations are we going for?           seed : TYPE
-        DESCRIPTION.
-    # randomization seed           verbose : TYPE, optional
-        DESCRIPTION. The default is False.
-    # intermediate outputs or nah?           missing_as_state_value : TYPE, optional
-        DESCRIPTION. The default is -1.
-    testmode : TYPE, optional
-        DESCRIPTION. The default is False.
-
+    
+    TODO
+    
     Raises
     ------
     Exception
@@ -266,14 +217,19 @@ def run_RL(env, logger,
         DESCRIPTION.
 
     """
-
-    if testmode:
-        assert K >= 1 or K is None
-        assert num_cycles >= 1 or num_cycles is None
-        assert epsilon >= 0
-        assert alpha >= 0
-        assert gamma >= 0
-        #TODO: others?
+    SingleImpMethods = ["random_action","last_fobs1",  "last_fobs2", "missing_state"]
+    MImethods = ["joint", "mice", "joint-conservative"]
+    if impute_method in MImethods:
+        assert K is not None
+        assert K >=1
+    else:
+        K = 0 #default to make below work, does nothing
+    if impute_method == "mice":
+        assert num_cycles is not None and num_cycles >= 1
+    assert epsilon >= 0
+    assert alpha >= 0
+    assert gamma >= 0
+    #--------------------------------------------------------------- 
    
     # For convenience
     MImethods = ["joint", "mice", "joint-conservative"]
@@ -314,7 +270,7 @@ def run_RL(env, logger,
     ###########################################################################
     for t_step in range(max_iters):
         
-        logger.start_t_step()
+        logger.start_t_step(t_step)
     
         # Choose action A from S using policy-derived from Q, possibly e-greedy
         action = rlt.get_action(last_imp_state = last_imp_state, 

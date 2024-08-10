@@ -9,6 +9,7 @@ import seaborn as sns
 import ImputerTools as impt
 import LakeWorldEnvironments as lwe
 import RLTools as rlt
+import MissingMechanisms as mm
 
 
 def get_state_value_lists(d, colors):  #don't need this in main anymore but useful here
@@ -26,46 +27,98 @@ def get_state_value_lists(d, colors):  #don't need this in main anymore but usef
     return(state_value_lists)
 
 
-def test_miss_mech():
+def test_lakeworld(print_action_plots = False, with_wind = False):
     """
     Some very basic sanity check tests. Could do more to make sure
     actually doing things at right rate but have in any case done some
     repeated draws to make sure things looked right
     """
-
+    
     # set-up
     theta_dict = {0: np.array([1,1,1]),
                        1: np.array([0.0,0.0,0.0]),
                        2: np.array([.4,.4,.4])}
     
     
-    i_range = (3,5); j_range = (3,5)
-    thetas_in = np.array([1,1,1])
-    thetas_out = np.array([0.0,0.0,0.0]) 
-    
+    env = lwe.LakeWorld(d=8,
+                        color_theta_dict= theta_dict,
+                        theta_in= np.array([1,1,1]),
+                        theta_out = np.array([0,0,0]),
+                        fog_i_range = (3,5),
+                        fog_j_range = (3,5),
+                        )
+
+  
+    env.set_state((1,1,1))
+    assert env.current_state[0] == 1
+    assert env.current_state[1] == 1
     
     # test of basic MCAR
-    state = np.array([1,1,1])
-    assert (lwe.MCAR(state,np.array([0,0,0])) == state).all()
-    assert np.isnan(lwe.MCAR(state,np.array([1,1,1]))).all()
-
+    env.MCAR_theta = [0,0,0]
+    assert all(elem == 1 for elem in env.MCAR())
+    env.MCAR_theta = [1,1,1]
+    assert all(np.isnan(env.MCAR()))
+    print("Test MCAR passed")
+    
+    
     
     # test of color
-    assert (lwe.Mcolor(state,theta_dict) == state).all()
-    state[2] = 0
-    assert np.isnan(lwe.Mcolor(state,theta_dict)).all()
+    assert all(elem == 1 for elem in env.Mcolor())
+    env.set_state((1,1,0))
+    assert all(np.isnan(elem) for elem in env.Mcolor())
+    print("Test MCOLOR passed")
     
-    # test of fog - out region  
-    out = lwe.Mfog(state, i_range = i_range, j_range = j_range, thetas_in = thetas_in, thetas_out = thetas_out)
-    assert (out == state).all()
     
-    # test of fog - in region
-    out = lwe.Mfog(np.array([4,4,1]), i_range = i_range, j_range = j_range, thetas_in = thetas_in, thetas_out = thetas_out)
-    assert np.isnan(out).all()
-   
     
-    print("Test miss mech passed")
+    # test of fog - out region, in region 
+    env.set_state((1,1,1))
+    assert all(elem == 1 for elem in env.Mfog())
+    env.set_state((4,4,1))
+    assert all(np.isnan(elem) for elem in env.Mfog())
+    print("Test MFOG passed")
     
+    # try taking steps
+    env.set_state((1,1,1))
+    env.step((1,1))
+    assert env.current_state[0] == 0
+    assert env.current_state[1] == 2
+    env.step((1,1))
+    assert env.current_state[0] == 0
+    assert env.current_state[1] == 3
+    env.step((-1,1))
+    
+    env.set_state((1,1,1))
+    env.step((-1,-1))
+    assert env.current_state[0] == 2
+    assert env.current_state[1] == 0
+    
+    # with wind  
+    
+    if print_action_plots:
+        
+        if with_wind:
+            env.p_wind_i = .5; env.p_wind_j = .5
+      
+        state = (2,2,1)
+        env.set_state(state)
+
+        # dummy grid with highlight at current location
+        gw = np.zeros((8,8))
+        gw[state[0], state[1]] = +100      
+        gw_colors = lwe.make_gw_colors(gw)
+        env.environments[2] = [gw, gw_colors] 
+        env.current_environment = 2
+        
+        for a in env.get_action_list():  
+            env.step(a)
+            gw[int(env.current_state[0]), int(env.current_state[1])] = 50 #mark on map where are
+            sns.heatmap(gw, cbar = False, cmap= 'viridis')
+            plt.title(env.action_dict[a])
+            plt.show()
+            #reset
+            gw[int(env.current_state[0]), int(env.current_state[1])] = 25 #old
+            env.set_state(state)
+         
     
     
     
@@ -556,9 +609,50 @@ def test_dummy_miss_pipeline(impute_method):
     
     print(f"A dummy example of the MI pipeline ran without error for imp method {impute_method}")
           
-      
+
         
-      
+def test_main_runRL():
+    
+    
+    env = lwe.LakeWorld(d = 8,
+                        colors = [0,1,2],
+                        baseline_penalty = -1, 
+                        water_penalty = -10,
+                        end_reward = 100,
+                        start_location = (7, 0),
+                        terminal_location = (6, 7),
+                        p_wind_i = .5,
+                        p_wind_j = .5,
+                        p_switch = .1,
+                        fog_i_range = (0,2),
+                        fog_j_range = (5,7),
+                        MCAR_theta = [0,0,0],
+                        theta_in = [0,0,0],
+                        theta_out = [0,0,0],
+                        color_theta_dict = {0:[0,0,0],1:[0,0,0],2:[0,0,0]},
+                        action_dict = "default",
+                        allow_stay_action = True
+                        )
+    
+    logger = lwe.LakeWorldLogger() 
+
+
+    rlt.run_RL(env,
+           logger,
+           env_missing = "MCAR", # environment-missingness governor "MCAR", "Mcolor", "Mfog"
+           impute_method = "last_fobs1", # "last_fobs", "random_action", "missing_state", "joint", "mice"
+               action_option = None, # voting1, voting2, averaging
+               K = None, #number of multiple imputation chains
+               num_cycles = None, #number of cycles used in Mice
+               epsilon = .1, # epsilon-greedy governor 
+               alpha = 1, # learning rate 
+               gamma = .8, # discount factor 
+               max_iters = 5, # how many iterations are we going for?
+               seed = 1, # randomization seed
+               verbose=True, # intermediate outputs or nah?
+               missing_as_state_value = -1)
+    
+    
 
 
 
@@ -572,7 +666,7 @@ def test_dummy_miss_pipeline(impute_method):
     
 if __name__ == "__main__":
     print("--")
-    test_miss_mech()
+    test_lakeworld(print_action_plots = False, with_wind = False)
     #test_actions() - produces visuals
     print("--")
     test_imputers()
@@ -589,5 +683,6 @@ if __name__ == "__main__":
     print("--")
     test_get_imputation()
     print("--")
+    test_main_runRL()
     
     

@@ -6,6 +6,7 @@ import numpy as np
 import LakeWorldEnvironments as lwe 
 import RLTools as rlt
 
+#TODO: decide whether to do by iteration logging -- too expensive?
 
 def run_LakeWorld(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
            p_wind_i, p_wind_j, # float, up-down/left-right wind frequency, {0.0, 0.1, 0.2}. INTENDED EQUAL!
