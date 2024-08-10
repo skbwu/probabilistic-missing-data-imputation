@@ -31,9 +31,44 @@ def get_imputation(impute_method : str,
                    num_cycles = None,
                    missing_as_state_value = None):
     """
-    TODO: fill this in
-    TOOD: test this function
-
+    Parameters
+    ----------
+    impute_method : str 
+        specifies which imputation method to use. 
+        
+    new_pobs_state : tuple
+        partially observed state to impute for. If fully observed, 
+        then returned as is
+    
+    last_fobs_state : tuple
+        the last fully observed state. This is used in some impute methods    
+    
+    last_A : the most recent action taken (the one before new_pobs_state was 
+             observed)
+        
+    last_state_list : list
+            if imputation method is a multiple imputation method, expect this.
+            Contains list of last observed states with their imputations
+            
+    K : int
+           if imputation method is multiple imputation method, this is number
+           of imputations drawn at each step. Should match length of 
+           last_state_list
+           
+    Tstandard : dictionary encoding transition matrix, optional
+        Required for MI method "joint" and "joint-conservative"
+        The default is None.
+        
+    Tmice : dictionary for encoding transitions, optional
+        Required for MI method "mice"
+    
+    num_cycles : int, optional
+        Required for MI method "mice" - specifices number of MICE algorithm cycles
+        to do at each step. Warning: quickly becomes computationally expensive if this is high
+            
+    missing_as_state_value : optional
+        If imputation method is 'missing_state', then all this function does is replace
+        any np.nan's with this value.
 
     Returns
     -------
@@ -44,6 +79,7 @@ def get_imputation(impute_method : str,
     the imputed state returned is simply a copy of the current state
 
     """
+
     new_imp_state_list = None
     
     if np.any(np.isnan(new_pobs_state)):
@@ -147,8 +183,6 @@ def get_action(last_imp_state : tuple,
     return(action)
     
     
-
-
 
 
 ###############################################################################

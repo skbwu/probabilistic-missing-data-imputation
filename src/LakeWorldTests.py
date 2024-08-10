@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 import ImputerTools as impt
-import GridWorldEnvironments as gwe
+import LakeWorldEnvironments as lwe
 import RLTools as rlt
 
 
@@ -46,21 +46,21 @@ def test_miss_mech():
     
     # test of basic MCAR
     state = np.array([1,1,1])
-    assert (gwe.MCAR(state,np.array([0,0,0])) == state).all()
-    assert np.isnan(gwe.MCAR(state,np.array([1,1,1]))).all()
+    assert (lwe.MCAR(state,np.array([0,0,0])) == state).all()
+    assert np.isnan(lwe.MCAR(state,np.array([1,1,1]))).all()
 
     
     # test of color
-    assert (gwe.Mcolor(state,theta_dict) == state).all()
+    assert (lwe.Mcolor(state,theta_dict) == state).all()
     state[2] = 0
-    assert np.isnan(gwe.Mcolor(state,theta_dict)).all()
+    assert np.isnan(lwe.Mcolor(state,theta_dict)).all()
     
     # test of fog - out region  
-    out = gwe.Mfog(state, i_range = i_range, j_range = j_range, thetas_in = thetas_in, thetas_out = thetas_out)
+    out = lwe.Mfog(state, i_range = i_range, j_range = j_range, thetas_in = thetas_in, thetas_out = thetas_out)
     assert (out == state).all()
     
     # test of fog - in region
-    out = gwe.Mfog(np.array([4,4,1]), i_range = i_range, j_range = j_range, thetas_in = thetas_in, thetas_out = thetas_out)
+    out = lwe.Mfog(np.array([4,4,1]), i_range = i_range, j_range = j_range, thetas_in = thetas_in, thetas_out = thetas_out)
     assert np.isnan(out).all()
    
     
@@ -75,22 +75,22 @@ def test_actions():
 
     """
     d = 5
-    for a in list(gwe.action_descs.keys()):
+    for a in list(lwe.action_descs.keys()):
             
         # try a test-case
         gw = np.zeros((d,d))
-        gw_colors = gwe.make_gw_colors(gw)
+        gw_colors = lwe.make_gw_colors(gw)
     
         # initialize our state randomly
         state = np.array([2, 2, 1])
         gw[state[0], state[1]] = +100
         
         # get our new state
-        new_state = gwe.true_move(state, a, gw, gw_colors, p_wind_i = 0, p_wind_j = 0)
+        new_state = lwe.true_move(state, a, gw, gw_colors, p_wind_i = 0, p_wind_j = 0)
         gw[int(new_state[0]), int(new_state[1])] = 50
         
         sns.heatmap(gw, cbar=False, cmap="viridis")
-        plt.title(gwe.action_descs[a])
+        plt.title(lwe.action_descs[a])
         plt.show()
     
 
@@ -486,6 +486,14 @@ def test_get_imputation():
     print(f"test of {impute_method} impute method passed - nothing missing case")
     
         
+    
+    
+    
+    
+    
+    
+    
+    
 
 def test_dummy_miss_pipeline(impute_method):
     """

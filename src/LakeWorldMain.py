@@ -3,7 +3,7 @@ This script contains the main functions for running the grid world environment a
 the missing data methods on them
 """
 import numpy as np
-import LakeWorldEnvironments as gwe 
+import LakeWorldEnvironments as lwe 
 import RLTools as rlt
 
 
@@ -30,7 +30,7 @@ def run_LakeWorld(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
 
     
     # initialize environment
-    env = gwe.LakeWorld(d = 8,
+    env = lwe.LakeWorld(d = 8,
                         colors = [0,1,2],
                         baseline_penalty = -1, 
                         water_penalty = -10,
@@ -54,7 +54,7 @@ def run_LakeWorld(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
     np.random.seed(seed)
     
     # Set-up logger
-    logger = gwe.LakeWorldLogger() 
+    logger = lwe.LakeWorldLogger() 
     
     rlt.run_RL(env, logger, env_missing, 
            impute_method, action_option, K, num_cycles, 
