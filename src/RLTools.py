@@ -354,10 +354,10 @@ def run_RL(env, logger,
         
         # status update?
         if verbose == True:
-            if (t_step+1) % 5 == 0 and len(logger.logs.index) >= 20:
+            if (t_step+1) % 10 == 0 and len(logger.logs.index) >= 20:
                 clear_output(wait=True)
                 print(f"""Timestep: {t_step+1}, Past 20 Mean Epi. Sum Reward: {np.round(logger.logs.loc[-20:].total_reward.mean(), 3)}, Fin. Episodes: {len(logger.logs.index)}, Past 20 Mean Path Length: {np.round(logger.logs.loc[-20:].num_steps.mean(), 3)}""")
-            elif (t_step+1) % 5 == 0:
+            elif (t_step+1) % 10 == 0:
                 clear_output(wait=True)
                 print(f"Timestep: {t_step+1}")
                 print(f"Total Reward So Far This Episode: {logger.total_reward}")
@@ -372,7 +372,7 @@ def run_RL(env, logger,
     
     # check if we have a results folder
     if "results" not in os.listdir():
-        os.mkdir("results")
+        os.makedirs("results")
 
     # start filename with environment-specific aspects
     fname = env.get_filename(env_missing)
@@ -401,9 +401,9 @@ def run_RL(env, logger,
 
     # make a directory for this foldername
     if fname not in os.listdir("results"):
-        os.mkdir(f"results/{fname}")
-
-    # save the EPISODES + STEPWISE log files to a .csv
+        os.makedirs(f"results/{fname}")
+  
+    # save the EPISODES + STEPWISE log files to a .csv        #TODO: make per time step optional
     logger.logs.to_csv(f"results/{fname}/episodic_seed={seed}.csv", index=False)
     logger.t_step_logs.to_csv(f"results/{fname}/stepwise_seed={seed}.csv", index=False)
 
@@ -412,4 +412,5 @@ def run_RL(env, logger,
         pickle.dump(Q, file)
         
     # just for kicks
+    print("Tada!")
     return 1
