@@ -647,12 +647,13 @@ def test_main_runRL():
                epsilon = .1, # epsilon-greedy governor 
                alpha = 1, # learning rate 
                gamma = .8, # discount factor 
-               max_iters = 5, # how many iterations are we going for?
+               max_iters = 10, # how many iterations are we going for?
                seed = 1, # randomization seed
                verbose=True, # intermediate outputs or nah?
                missing_as_state_value = -1)
     
     
+    print("The RL pipeline ran for 10 iterations")
 
 
 
