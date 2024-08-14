@@ -74,6 +74,8 @@ class LakeWorld():
         # missingness settings
         assert len(self.current_state) == len(theta_in), "theta_in length mismatch"
         assert len(self.current_state) == len(theta_out), "theta_out length mismatch"
+        assert all(elem in colors for elem in color_theta_dict.keys())
+        assert all(elem in color_theta_dict.keys() for elem in colors)
         self.MCAR_theta = MCAR_theta
         self.fog_i_range = fog_i_range
         self.fog_j_range = fog_j_range
@@ -293,7 +295,7 @@ class LakeWorld():
         # else, throw a hissy fit
         else:
             raise Exception("Missingness mechanism is not supported.")
-            
+        return(fname)        
     
         
             
@@ -348,17 +350,16 @@ class LakeWorldLogger():
         """Resets all counters to 0"""
         self.total_reward = 0
         self.steps_river = 0
-        self.num_steps = 0,
-        self.counts_0miss = 0,
-        self.counts_1miss = 0,
-        self.counts_3miss = 0,
+        self.num_steps = 0
+        self.counts_0miss = 0
+        self.counts_1miss = 0
+        self.counts_3miss = 0
         self.start_time = time.time()
         
     def update_epsisode_log(self, env, new_pobs_state, reward):
         """
         Update the various trackers that have new info per step
         """
-        
         self.num_steps += 1
         
         self.total_reward += reward
@@ -400,7 +401,7 @@ class LakeWorldLogger():
     # TIMESTEP TRACKING
     ##########################
     def start_t_step(self, t_step): 
-        self.start_t_step = time.time()
+        self.start_time_t_step = time.time()
         self.t_step_row = [t_step]
     
     def finish_t_step(self, env, action, new_true_state, new_pobs_state, reward):
@@ -408,7 +409,7 @@ class LakeWorldLogger():
         self.t_step_row += [action[0], action[1]]
         self.t_step_row += [elem for elem in new_true_state]
         self.t_step_row += [new_pobs_state[0], new_pobs_state[1], new_pobs_state[2], reward]
-        self.t_step_row += [time.time() - self.start_t_step]
+        self.t_step_row += [time.time() - self.start_time_t_step]
         self.t_step_logs.loc[len(self.t_step_logs.index)] = self.t_step_row
         
       
