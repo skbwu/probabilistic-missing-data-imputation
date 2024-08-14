@@ -321,7 +321,7 @@ class LakeWorldLogger():
     def __init__(self, per_timestep = True):
         
         # for episode logs
-        self.logs = pd.DataFrame(data=None, 
+        self.episode_logs = pd.DataFrame(data=None, 
                             columns=["total_reward",
                                      "steps_river",
                                      "num_steps", 

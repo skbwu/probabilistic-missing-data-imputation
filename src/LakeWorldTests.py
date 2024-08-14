@@ -5,6 +5,7 @@ Script for tests of our functions
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import time
 
 import ImputerTools as impt
 import LakeWorldEnvironments as lwe
@@ -636,7 +637,9 @@ def test_main_runRL():
     
     logger = lwe.LakeWorldLogger() 
 
+    t = 100
 
+    s = time.time()
     rlt.run_RL(env,
            logger,
            env_missing = "MCAR", # environment-missingness governor "MCAR", "Mcolor", "Mfog"
@@ -647,15 +650,35 @@ def test_main_runRL():
                epsilon = .1, # epsilon-greedy governor 
                alpha = 1, # learning rate 
                gamma = .8, # discount factor 
-               max_iters = 10, # how many iterations are we going for?
+               max_iters = t, # how many iterations are we going for?
                seed = 1, # randomization seed
                verbose=True, # intermediate outputs or nah?
-               missing_as_state_value = -1)
-    
-    
-    print("The RL pipeline ran for 10 iterations")
+               missing_as_state_value = -1,
+               save_Q = True,
+               log_per_t_step = True)
+    e = time.time()
+    print(f"The RL pipeline ran for {t} iterations in {e-s} seconds with per-timestep logging and save Q")
 
+    s = time.time()
+    rlt.run_RL(env,
+           logger,
+           env_missing = "MCAR", # environment-missingness governor "MCAR", "Mcolor", "Mfog"
+           impute_method = "last_fobs1", # "last_fobs", "random_action", "missing_state", "joint", "mice"
+               action_option = None, # voting1, voting2, averaging
+               K = None, #number of multiple imputation chains
+               num_cycles = None, #number of cycles used in Mice
+               epsilon = .1, # epsilon-greedy governor 
+               alpha = 1, # learning rate 
+               gamma = .8, # discount factor 
+               max_iters = t, # how many iterations are we going for?
+               seed = 1, # randomization seed
+               verbose=True, # intermediate outputs or nah?
+               missing_as_state_value = -1,
+               save_Q = False,
+               log_per_t_step = False)
+    e = time.time()
 
+    print(f"The RL pipeline ran for {t} iterations in {e-s} seconds without per-timestep logging or save Q")
 
 
     

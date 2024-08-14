@@ -201,7 +201,9 @@ def run_RL(env, logger,
            max_iters, # how many iterations are we going for?
            seed, # randomization seed
            verbose=False, # intermediate outputs or nah?
-           missing_as_state_value = -1): 
+           missing_as_state_value = -1,
+           save_Q = True,
+           log_per_t_step = False):  #always logs per episode
     """
     
     TODO
@@ -270,7 +272,8 @@ def run_RL(env, logger,
     ###########################################################################
     for t_step in range(max_iters):
         
-        logger.start_t_step(t_step)
+        if log_per_t_step:
+            logger.start_t_step(t_step)
     
         # Choose action A from S using policy-derived from Q, possibly e-greedy
         action = rlt.get_action(last_imp_state = last_imp_state, 
@@ -350,13 +353,14 @@ def run_RL(env, logger,
 
         # LOGGING 
         logger.update_epsisode_log(env, new_pobs_state, reward)
-        logger.finish_t_step(env, action, new_true_state, new_pobs_state, reward)
+        if log_per_t_step:
+            logger.finish_t_step(env, action, new_true_state, new_pobs_state, reward)
         
         # status update?
         if verbose == True:
-            if (t_step+1) % 10 == 0 and len(logger.logs.index) >= 20:
+            if (t_step+1) % 10 == 0 and len(logger.episode_logs.index) >= 20:
                 clear_output(wait=True)
-                print(f"""Timestep: {t_step+1}, Past 20 Mean Epi. Sum Reward: {np.round(logger.logs.loc[-20:].total_reward.mean(), 3)}, Fin. Episodes: {len(logger.logs.index)}, Past 20 Mean Path Length: {np.round(logger.logs.loc[-20:].num_steps.mean(), 3)}""")
+                print(f"""Timestep: {t_step+1}, Past 20 Mean Epi. Sum Reward: {np.round(logger.episode_logs.loc[-20:].total_reward.mean(), 3)}, Fin. Episodes: {len(logger.episode_logs.index)}, Past 20 Mean Path Length: {np.round(logger.episode_logs.loc[-20:].num_steps.mean(), 3)}""")
             elif (t_step+1) % 10 == 0:
                 clear_output(wait=True)
                 print(f"Timestep: {t_step+1}")
@@ -403,13 +407,15 @@ def run_RL(env, logger,
     if fname not in os.listdir("results"):
         os.makedirs(f"results/{fname}")
   
-    # save the EPISODES + STEPWISE log files to a .csv        #TODO: make per time step optional
-    logger.logs.to_csv(f"results/{fname}/episodic_seed={seed}.csv", index=False)
-    logger.t_step_logs.to_csv(f"results/{fname}/stepwise_seed={seed}.csv", index=False)
+    # save the EPISODES + STEPWISE log files to a .csv   
+    logger.episode_logs.to_csv(f"results/{fname}/episodic_seed={seed}.csv", index=False)
+    if log_per_t_step:
+        logger.t_step_logs.to_csv(f"results/{fname}/stepwise_seed={seed}.csv", index=False)
 
     # save the Q matrix to a .pickle
-    with open(f"results/{fname}/Q_seed={seed}.pickle", "wb") as file:
-        pickle.dump(Q, file)
+    if save_Q:
+        with open(f"results/{fname}/Q_seed={seed}.pickle", "wb") as file:
+            pickle.dump(Q, file)
         
     # just for kicks
     print("Tada!")
