@@ -3,13 +3,15 @@ This repo accompanies the paper "Missing Data Multiple Imputation for Tabular Q-
 
 Within the `src` directory:
 
-* `GridWorldMain` contains the main function for running various methods in our environment
-* `GridWorldEnvironment` contains functions for setting up and visualizing the environment, taking an action in that environment, and generating the missingness under various mechanisms
+* `LakeWorldEnvironment` contains functions for setting up an instance of our LakeWorld RL environment, instances of which include methods for generating missingness in their states
+* `LakeWorldMain` contains the main function for running the Lake World Environment
 * `ImputerTools' contains functions for implementing imputation ensembles
-* `GridWorldTests` contains some tests of various functions in the above scripts
+* `RLTools' contains the functions for running our RL pipeline
+* `MissingMechanisms' contains general functions for generating missingness that are used in multiple other places
 * `SimulationHelpers` contains functions that aid in running our simulations
+* `LakeWorldTests` contains some tests of various functions in the above scripts
 
-**To run our simulation:** run `pmdi_main_v3_runscript_driver.sh` after making appropriate updates to filepaths.
+**To run our simulation:** run `pmdi_main_v3_runscript_driver.sh` after making appropriate updates to filepaths. **TODO** update this
 
 **To generate analysis files**: run `analyzer_main_runscript_driver.sh` and use `analyzer.ipynb` to combine the resulting files.
 
