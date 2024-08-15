@@ -643,7 +643,7 @@ def test_main_runRL():
     s = time.time()
     rlt.run_RL(env,
            logger,
-           env_missing = "MCAR", # environment-missingness governor "MCAR", "Mcolor", "Mfog"
+           miss_mech = "MCAR", # environment-missingness governor "MCAR", "Mcolor", "Mfog"
            impute_method = "last_fobs", # "last_fobs", "random_action", "missing_state", "joint", "mice"
                action_option = None, # voting1, voting2, averaging
                K = None, #number of multiple imputation chains
@@ -663,7 +663,7 @@ def test_main_runRL():
     s = time.time()
     rlt.run_RL(env,
            logger,
-           env_missing = "MCAR", # environment-missingness governor "MCAR", "Mcolor", "Mfog"
+           miss_mech = "MCAR", # environment-missingness governor "MCAR", "Mcolor", "Mfog"
            impute_method = "last_fobs", # "last_fobs", "random_action", "missing_state", "joint", "mice"
                action_option = None, # voting1, voting2, averaging
                K = None, #number of multiple imputation chains
