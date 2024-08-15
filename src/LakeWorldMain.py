@@ -10,9 +10,9 @@ import RLTools as rlt
 
 def run_LakeWorld(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
            p_wind_i, p_wind_j, # float, up-down/left-right wind frequency, {0.0, 0.1, 0.2}. INTENDED EQUAL!
-           allow_stay_action, #4/16/2024 addition 
+           allow_stay_action, #4/16/2024 addition: True or False
            env_missing, # environment-missingness governor "MCAR", "Mcolor", "Mfog"
-           MCAR_theta, # np.array, MCAR, same theta_i values {0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5}
+           MCAR_theta, # np.array, MCAR, same theta_i values {0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95}
            theta_in, # np.array, Mfog, in: (0.5, 0.5, 0.5) + (0.25, 0.25, 0.25)
            theta_out, # np.array, Mfog, out: (0.0, 0.0, 0.0) + (0.1, 0.1, 0.1)
            color_theta_dict, # dict with keys {0, 1, 2} corresponding to a np.array each.
@@ -23,10 +23,10 @@ def run_LakeWorld(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
            epsilon, # epsilon-greedy governor {0.0, 0.01, 0.05}
            alpha, # learning rate (0.1, 1.0)
            gamma, # discount factor (0.0, 0.25, 0.5, 0.75, 1.0)
-           max_iters, # how many iterations are we going for?
+           max_iters, # how many iterations are we going for? 50K
            seed, # randomization seed
            verbose=False, # intermediate outputs or nah?
-           river_restart=False, # option to force agent back to starting point if fall into river. 
+           river_restart=False, # option to force agent back to starting point if fall into river. True or False.
            testmode = False): 
 
     
