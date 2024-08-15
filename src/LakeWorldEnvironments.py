@@ -97,9 +97,11 @@ class LakeWorld():
                                 (-1, 1): "diag-left-up"}
             if allow_stay_action:
                 self.action_dict[(0,0)] = "stay"
-            
         else: 
             self.action_dict = action_dict
+        
+        self.action_list = list(self.action_dict.keys())
+
             
         # how to encode missing as state
         self.missing_as_state_value = -1
@@ -109,10 +111,6 @@ class LakeWorld():
         """Allow user to manually set the state."""
         self.current_state = state
         
-    def get_action_list(self):
-        """Get possible actions in a list"""
-        return list(self.action_dict.keys())
-
     def get_reward(self):
         """ Get reward from current state """
         reward = self.environments[self.current_environment][0][self.current_state[0],

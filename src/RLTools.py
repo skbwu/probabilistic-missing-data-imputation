@@ -11,8 +11,8 @@ import RLTools as rlt
 
 
 SingleImpMethods = ["random_action", #this ultimately an attribute
-             "last_fobs1",
-             "last_fobs2",
+             "last_fobs",
+             "last_obs",
              "missing_state"]
 
 MImethods = ["joint", #TODO: better names for this? joint-synthetic?
@@ -23,6 +23,7 @@ MImethods = ["joint", #TODO: better names for this? joint-synthetic?
 def get_imputation(impute_method : str,
                    new_pobs_state : tuple, 
                    last_fobs_state : tuple,
+                   last_obs_state_comp : tuple,
                    last_A,
                    last_state_list : list, 
                    K : int,
@@ -41,7 +42,16 @@ def get_imputation(impute_method : str,
         then returned as is
     
     last_fobs_state : tuple
-        the last fully observed state. This is used in some impute methods    
+        the last fully observed state. This is used in some impute methods 
+        
+    last_obs_state_comp : tuple
+        the ith element of this tuple contains the last observed instance of 
+        that dimension of the state space, even if when that dimension was
+        observed, others were not. If the last time step was fully observed,
+        then this is the same as last_fobs_state, but otherwise, it may differ
+        
+        e.g. if the states are (1,2,1), (1,4,?),(2,?,3) then last_fobs_state is
+        (1,2,1) while last_obs_state_comp is (1,4,3)
     
     last_A : the most recent action taken (the one before new_pobs_state was 
              observed)
@@ -88,11 +98,11 @@ def get_imputation(impute_method : str,
         if impute_method == "random_action":
             return None, None
 
-        if impute_method == "last_fobs1":
+        if impute_method == "last_fobs":
             new_imp_state = copy.deepcopy(last_fobs_state)
             
-        elif impute_method == "last_fobs2":
-            new_imp_state = tuple([i if ~np.isnan(i) else j for (i,j) in zip(new_pobs_state, last_fobs_state)])
+        elif impute_method == "last_obs":
+            new_imp_state = tuple([i if ~np.isnan(i) else j for (i,j) in zip(new_pobs_state, last_obs_state_comp)])
                
         elif impute_method == "missing_state":
 
@@ -190,7 +200,7 @@ def get_action(last_imp_state : tuple,
 ###############################################################################
 
 def run_RL(env, logger,
-           env_missing, # environment-missingness governor "MCAR", "Mcolor", "Mfog"
+           miss_mech, # environment-missingness governor "MCAR", "Mcolor", "Mfog"
            impute_method, # "last_fobs", "random_action", "missing_state", "joint", "mice"
            action_option, # voting1, voting2, averaging
            K, #number of multiple imputation chains
@@ -203,23 +213,74 @@ def run_RL(env, logger,
            verbose=False, # intermediate outputs or nah?
            missing_as_state_value = -1,
            save_Q = True,
+           log_per_episode = True,
            log_per_t_step = False):  #always logs per episode
     """
+    Runs the following overall pipeline for max_iters time steps.
+    At each time step
+        1. Take an action according to action_method
+        2. Observe next state, partially with missingness, and observe reward
+        3. Run an impute method if needed, possibly with multiple imputation
+        4. Learning: Update Q matrix, T matrix
+        (5. take an action...)
     
-    TODO
-    
-    Raises
-    ------
-    Exception
-        DESCRIPTION.
+    env specifications:
+        
+        env must be an instance of a class for running an RL environment. 
+        It must have the following methods and attributes
+        
+            env.action_list - returns list of possible actions
+            
+            env.state_value_lists - returns a list of lists where the i^th sublist
+                                    is all the possible values of the i^th element of
+                                    the state vector. order matters.
+                                    e.g., for a 3-dimensional state, each component binary,
+                                    this would be [[0,1],[0,1],[0,1]]
+                                   
+            env.step(action) - takes an action in the environment. <action> must
+                                be contained in env.action_list. Must update the 
+                                current state.
+            
+            env.current_state - current state of the environment. Must be updated by
+                                env.step()
+         
+            env.<miss_mech> - miss_mech argument of this function should match the name of a
+                   missingness mechanism method which returns the current state only with possible
+                   missingness
+                               
+            env.get_filename(miss_mech) - returns a part of a filename to be used in saving
+                            files related to this instance of the environment. This should
+                            for example encode any parameter settings specific to this run.
+                            This does not need to include any imputation settings as those are
+                            automatically added to the file name by this function.
+                            
+         
+        logger specifications:
+        
+            #TODO: this may need to be revised to fit gymnasium set-up 
+        
+            if logger is None, then no tracking of per-episode quantities from the 
+            RL run are saved. (separately, if save_Q is saved, the final Q function estimate
+                               will be)
+            
+            if logger is given, enables saving of trajectories in per-step or per-episodes logs
+        
+            if log_per_episode = True, logger instance should have:
+                logger.start_epsiode() 
+                logger.update_epsisode_log(env, new_pobs_state, reward)
+                logger.finish_and_reset_epsiode()  
+                logger.episode_log  - a pandas data frame where logging is stored
 
-    Returns
-    -------
-    int
-        DESCRIPTION.
-
+        
+            if log_per_t_step = True, logger instance should have:
+                logger.start_t_step(t_step)
+                logger.finish_t_step(env, action, new_true_state, new_pobs_state, reward)
+                logger.t_step_logs - a pandas data frame where logging is stored
+                
+            see LakeWorldEnvironments.py for examples of what these functions might do
+        
     """
-    SingleImpMethods = ["random_action","last_fobs1",  "last_fobs2", "missing_state"]
+    SingleImpMethods = ["random_action","last_fobs",  "last_obs", "missing_state"]
     MImethods = ["joint", "mice", "joint-conservative"]
     if impute_method in MImethods:
         assert K is not None
@@ -231,13 +292,18 @@ def run_RL(env, logger,
     assert epsilon >= 0
     assert alpha >= 0
     assert gamma >= 0
+    if log_per_episode:
+        assert logger is not None, "logger object must be specified if log_per_episode = True"
+    if log_per_t_step:
+        assert logger is not None, "logger object must be specified if log_per_t_step = True"
+        
     #--------------------------------------------------------------- 
    
     # For convenience
     MImethods = ["joint", "mice", "joint-conservative"]
   
     # Get other environment attributes
-    action_list = env.get_action_list()
+    action_list = env.action_list
     state_value_lists = env.state_value_lists
     
     # set our seed for use in multiple trials
@@ -265,9 +331,10 @@ def run_RL(env, logger,
     last_pobs_state, last_imp_state = env.current_state, env.current_state
     last_imp_state_list = [env.current_state] * int(K) 
     last_fobs_state = env.current_state
+    last_obs_state_comp = env.current_state
 
-  
-    logger.start_epsiode() #start episode 1
+    if log_per_episode:
+        logger.start_epsiode() #start episode 1
 
     ###########################################################################
     for t_step in range(max_iters):
@@ -289,15 +356,17 @@ def run_RL(env, logger,
         assert new_true_state == env.current_state  #TODO: temp - just to check when run this
        
         # Apply missingness mechanism to generate new partially observed state
-        if hasattr(env, env_missing):
-            miss_method = getattr(env, env_missing)
+        if hasattr(env, miss_mech):
+            miss_method = getattr(env, miss_mech)
             new_pobs_state = miss_method()
         else:
-            raise Exception(f"env does not have a missing method called {env_missing}")
+            raise Exception(f"env does not have a missing method called {miss_mech}")
           
         # Impute for the new_pobs_state, if needed
         new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method = impute_method,
-                           new_pobs_state  = new_pobs_state, last_fobs_state = last_fobs_state, 
+                           new_pobs_state  = new_pobs_state, 
+                           last_fobs_state = last_fobs_state,
+                           last_obs_state_comp = last_obs_state_comp,
                            last_A = action, 
                            last_state_list = last_imp_state_list,
                            K = K, Tstandard = Tstandard, Tmice = Tmice, num_cycles = num_cycles,
@@ -343,6 +412,9 @@ def run_RL(env, logger,
         # check whether last_fobs_state can be updated
         if ~np.any(np.isnan(new_pobs_state)):
             last_fobs_state = copy.deepcopy(new_pobs_state)
+            
+        # Update last_obs_state_comp with any parts that were observed  
+        last_obs_state_comp = [i if ~np.isnan(i) else j for (i,j) in zip(new_pobs_state, last_obs_state_comp)]      
 
         # now that we have updated Q and T, update 'lasts' for next round
         last_pobs_state = copy.deepcopy(new_pobs_state)
@@ -352,12 +424,13 @@ def run_RL(env, logger,
         
 
         # LOGGING 
-        logger.update_epsisode_log(env, new_pobs_state, reward)
+        if log_per_episode: 
+            logger.update_epsisode_log(env, new_pobs_state, reward)
         if log_per_t_step:
             logger.finish_t_step(env, action, new_true_state, new_pobs_state, reward)
         
         # status update?
-        if verbose == True:
+        if verbose == True and log_per_episode:
             if (t_step+1) % 10 == 0 and len(logger.episode_logs.index) >= 20:
                 clear_output(wait=True)
                 print(f"""Timestep: {t_step+1}, Past 20 Mean Epi. Sum Reward: {np.round(logger.episode_logs.loc[-20:].total_reward.mean(), 3)}, Fin. Episodes: {len(logger.episode_logs.index)}, Past 20 Mean Path Length: {np.round(logger.episode_logs.loc[-20:].num_steps.mean(), 3)}""")
@@ -365,8 +438,11 @@ def run_RL(env, logger,
                 clear_output(wait=True)
                 print(f"Timestep: {t_step+1}")
                 print(f"Total Reward So Far This Episode: {logger.total_reward}")
+        elif verbose == True and log_per_t_step:
+            pass
+            #TODO: add some alternative printing if only doing tstep logging
                 
-        if terminal:
+        if terminal and log_per_episode:
             logger.finish_and_reset_epsiode()            
         
     
@@ -379,7 +455,7 @@ def run_RL(env, logger,
         os.makedirs("results")
 
     # start filename with environment-specific aspects
-    fname = env.get_filename(env_missing)
+    fname = env.get_filename(miss_mech)
 
     # add in our imputation mechanism
     IM_desc = impute_method.replace("_", "-")
@@ -407,8 +483,9 @@ def run_RL(env, logger,
     if fname not in os.listdir("results"):
         os.makedirs(f"results/{fname}")
   
-    # save the EPISODES + STEPWISE log files to a .csv   
-    logger.episode_logs.to_csv(f"results/{fname}/episodic_seed={seed}.csv", index=False)
+    # save the EPISODES + STEPWISE log files to a .csv 
+    if log_per_episode:
+        logger.episode_logs.to_csv(f"results/{fname}/episodic_seed={seed}.csv", index=False)
     if log_per_t_step:
         logger.t_step_logs.to_csv(f"results/{fname}/stepwise_seed={seed}.csv", index=False)
 

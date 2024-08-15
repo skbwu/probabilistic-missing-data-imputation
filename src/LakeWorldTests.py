@@ -110,7 +110,7 @@ def test_lakeworld(print_action_plots = False, with_wind = False):
         env.environments[2] = [gw, gw_colors] 
         env.current_environment = 2
         
-        for a in env.get_action_list():  
+        for a in env.action_list:  
             env.step(a)
             gw[int(env.current_state[0]), int(env.current_state[1])] = 50 #mark on map where are
             sns.heatmap(gw, cbar = False, cmap= 'viridis')
@@ -421,7 +421,7 @@ def test_select_action():
     
     rlt.get_action(last_imp_state = (0,0,3),
                    last_imp_state_list = [(0,0,1),(0,0,2)],
-                  impute_method = "last_fobs1",
+                  impute_method = "last_fobs",
                   action_list = action_list,
                   Q = Q, 
                   epsilon = .05,
@@ -436,6 +436,7 @@ def test_get_imputation():
     
     new_pobs_state = (1,2,1,np.nan)
     last_fobs_state = (1,1,0,2)
+    last_obs_state_comp = (1,5,0,4)
     last_A = (1,1)
     last_state_list = [(1,1,1,2),(1,1,2,2)]
     K = len(last_state_list)
@@ -454,41 +455,41 @@ def test_get_imputation():
                         action_list, 
                        init_value = 0.0)
 
-        
+
     impute_method = "random_action"
     new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method,
-                   new_pobs_state, last_fobs_state,
+                   new_pobs_state, last_fobs_state, last_obs_state_comp,
                    last_A, last_state_list, K)
     
     assert new_imp_state == None and new_imp_state_list == None
     print(f"test of {impute_method} impute method passed")
     
     
-    impute_method = "last_fobs1"
+    impute_method = "last_fobs"
     new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method,
-                   new_pobs_state, last_fobs_state,
+                   new_pobs_state, last_fobs_state, last_obs_state_comp,
                    last_A, last_state_list, K)
     assert new_imp_state == last_fobs_state and new_imp_state_list == None
     print(f"test of {impute_method} impute method passed")
     
     new_pobs_state_temp = (1,2,1,1)
     new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method,
-                   new_pobs_state_temp, last_fobs_state,
+                   new_pobs_state_temp, last_fobs_state, last_obs_state_comp,
                    last_A, last_state_list, K)
     assert new_imp_state == new_pobs_state_temp and new_imp_state_list == None
     print(f"test of {impute_method} impute method passed - nothing missing case")
     
     
-    impute_method = "last_fobs2"
+    impute_method = "last_obs"
     new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method,
-                   new_pobs_state, last_fobs_state,
+                   new_pobs_state, last_fobs_state, last_obs_state_comp,
                    last_A, last_state_list, K)
-    assert new_imp_state == (1,2,1,2) and new_imp_state_list == None
+    assert new_imp_state == (1,2,1,4) and new_imp_state_list == None
     print(f"test of {impute_method} impute method passed")
     
     impute_method = "missing_state"
     new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method,
-                   new_pobs_state, last_fobs_state,
+                   new_pobs_state, last_fobs_state, last_obs_state_comp,
                    last_A, last_state_list, K,
                    missing_as_state_value = missing_as_state_value)
     assert new_imp_state == (1,2,1,missing_as_state_value) and new_imp_state_list == None
@@ -496,7 +497,7 @@ def test_get_imputation():
     
     impute_method = "joint"
     new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method,
-                   new_pobs_state, last_fobs_state,
+                   new_pobs_state, last_fobs_state, last_obs_state_comp,
                    last_A, last_state_list, K,
                    Tstandard = Tstandard)
     assert new_imp_state == None 
@@ -507,7 +508,7 @@ def test_get_imputation():
 
     impute_method = "joint-conservative"
     new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method,
-                   new_pobs_state, last_fobs_state,
+                   new_pobs_state, last_fobs_state, last_obs_state_comp,
                    last_A, last_state_list, K,
                    Tstandard = Tstandard)
     assert new_imp_state == None 
@@ -518,7 +519,7 @@ def test_get_imputation():
 
     impute_method = "mice"
     new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method,
-                    new_pobs_state, last_fobs_state,
+                    new_pobs_state, last_fobs_state, last_obs_state_comp,
                     last_A, last_state_list, K,
                     Tmice = Tmice, 
                     num_cycles = 2)
@@ -531,7 +532,7 @@ def test_get_imputation():
     
     new_pobs_state_temp = (1,2,1,1)
     new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method,
-                   new_pobs_state_temp, last_fobs_state,
+                   new_pobs_state_temp, last_fobs_state, last_obs_state_comp,
                    last_A, last_state_list, K,Tmice = Tmice, 
                    num_cycles = 2)
     assert new_imp_state == new_pobs_state_temp 
@@ -643,7 +644,7 @@ def test_main_runRL():
     rlt.run_RL(env,
            logger,
            env_missing = "MCAR", # environment-missingness governor "MCAR", "Mcolor", "Mfog"
-           impute_method = "last_fobs1", # "last_fobs", "random_action", "missing_state", "joint", "mice"
+           impute_method = "last_fobs", # "last_fobs", "random_action", "missing_state", "joint", "mice"
                action_option = None, # voting1, voting2, averaging
                K = None, #number of multiple imputation chains
                num_cycles = None, #number of cycles used in Mice
@@ -663,7 +664,7 @@ def test_main_runRL():
     rlt.run_RL(env,
            logger,
            env_missing = "MCAR", # environment-missingness governor "MCAR", "Mcolor", "Mfog"
-           impute_method = "last_fobs1", # "last_fobs", "random_action", "missing_state", "joint", "mice"
+           impute_method = "last_fobs", # "last_fobs", "random_action", "missing_state", "joint", "mice"
                action_option = None, # voting1, voting2, averaging
                K = None, #number of multiple imputation chains
                num_cycles = None, #number of cycles used in Mice
