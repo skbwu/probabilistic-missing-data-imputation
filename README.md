@@ -5,9 +5,9 @@ Within the `src` directory:
 
 * `LakeWorldEnvironment` contains functions for setting up an instance of our LakeWorld RL environment, instances of which include methods for generating missingness in their states
 * `LakeWorldMain` contains the main function for running the Lake World Environment
-* `ImputerTools' contains functions for implementing imputation ensembles
-* `RLTools' contains the functions for running our RL pipeline
-* `MissingMechanisms' contains general functions for generating missingness that are used in multiple other places
+* `ImputerTools` contains functions for implementing imputation ensembles
+* `RLTools` contains the functions for running our RL pipeline
+* `MissingMechanisms` contains general functions for generating missingness that are used in multiple other places
 * `SimulationHelpers` contains functions that aid in running our simulations
 * `LakeWorldTests` contains some tests of various functions in the above scripts
 
