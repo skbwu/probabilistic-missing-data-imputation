@@ -353,8 +353,8 @@ def run_RL(env, logger,
              
         # Take action A, observe R, S'
         reward, new_true_state, terminal = env.step(action) #environment stochasticity handled internally
-        assert new_true_state == env.current_state  #TODO: temp - just to check when run this
-       
+        assert new_true_state == env.current_state  
+        
         # Apply missingness mechanism to generate new partially observed state
         if hasattr(env, miss_mech):
             miss_method = getattr(env, miss_mech)
