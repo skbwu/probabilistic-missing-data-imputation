@@ -61,8 +61,7 @@ def run_LakeWorld(p_switch, # float, flooding Markov chain parameter, {0.0, 0.1}
            impute_method, action_option, K, num_cycles, 
            epsilon = epsilon, alpha = alpha, gamma = gamma, 
            max_iters = max_iters, seed = seed, 
-           verbose = verbose, missing_as_state_value = env.missing_as_state_value,
-           testmode = testmode)
+           verbose = verbose, missing_as_state_value = env.missing_as_state_value)
     
     # just for kicks
     return 1

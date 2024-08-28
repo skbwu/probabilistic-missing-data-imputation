@@ -334,7 +334,7 @@ def run_RL(env, logger,
     last_obs_state_comp = env.current_state
 
     if log_per_episode:
-        logger.start_epsiode() #start episode 1
+        logger.start_episode() #start episode 1
 
     ###########################################################################
     for t_step in range(max_iters):
@@ -353,8 +353,8 @@ def run_RL(env, logger,
              
         # Take action A, observe R, S'
         reward, new_true_state, terminal = env.step(action) #environment stochasticity handled internally
-        assert new_true_state == env.current_state  
-        
+        assert new_true_state == env.current_state  #TODO: temp - just to check when run this
+       
         # Apply missingness mechanism to generate new partially observed state
         if hasattr(env, miss_mech):
             miss_method = getattr(env, miss_mech)
@@ -425,7 +425,7 @@ def run_RL(env, logger,
 
         # LOGGING 
         if log_per_episode: 
-            logger.update_epsisode_log(env, new_pobs_state, reward)
+            logger.update_episode_log(env, new_pobs_state, reward)
         if log_per_t_step:
             logger.finish_t_step(env, action, new_true_state, new_pobs_state, reward)
         
@@ -443,7 +443,7 @@ def run_RL(env, logger,
             #TODO: add some alternative printing if only doing tstep logging
                 
         if terminal and log_per_episode:
-            logger.finish_and_reset_epsiode()            
+            logger.finish_and_reset_episode()            
         
     
     ###############################################################

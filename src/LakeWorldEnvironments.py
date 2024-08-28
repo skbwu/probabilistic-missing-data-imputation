@@ -344,17 +344,18 @@ class LakeWorldLogger():
     ##########################
     # EPISODE TRACKING
     ##########################
-    def start_epsiode(self):
+    def start_episode(self):
         """Resets all counters to 0"""
         self.total_reward = 0
         self.steps_river = 0
         self.num_steps = 0
         self.counts_0miss = 0
         self.counts_1miss = 0
+        self.counts_2miss = 0
         self.counts_3miss = 0
         self.start_time = time.time()
         
-    def update_epsisode_log(self, env, new_pobs_state, reward):
+    def update_episode_log(self, env, new_pobs_state, reward):
         """
         Update the various trackers that have new info per step
         """
@@ -376,7 +377,7 @@ class LakeWorldLogger():
             self.counts_3miss += 1
             
                     
-    def finish_and_reset_epsiode(self):
+    def finish_and_reset_episode(self):
         """Add this episode to overall dataframe and reset things so that
         can start logging a new episode"""
         
@@ -389,7 +390,7 @@ class LakeWorldLogger():
                wall_clock_time]
         
         # add to dataframe
-        self.logs.loc[len(self.logs.index)] = row
+        self.episode_logs.loc[len(self.episode_logs.index)] = row
         
         #start a new episode
         self.start_episode()
