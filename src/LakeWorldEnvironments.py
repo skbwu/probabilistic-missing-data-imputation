@@ -134,8 +134,10 @@ class LakeWorld():
         self.refresh_environment()
 
         #if current state is terminal state, telaport to origin before take action
-        if self.current_state == self.terminal_location:
-            self.current_state = self.start_location
+        if (self.current_state[0], self.current_state[1]) == self.terminal_location:
+            self.current_state = (self.start_location[0], self.start_location[1], 
+                                  self.environments[self.current_environment][1][self.start_location[0], 
+                                                                                 self.start_location[1]])
         
         # extract the state quantities
         i, j, c = tuple(self.current_state)
