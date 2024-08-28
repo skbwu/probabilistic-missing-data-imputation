@@ -123,29 +123,24 @@ def test_lakeworld(print_action_plots = False, with_wind = False):
     
     
     
-def test_actions():
+def test_terminal_state_step():
     """
-    Try all possible actions and examine visusally if has done right thing
+    Test that step() actually moves you to terminal state
+    """
+    env = lwe.LakeWorld(d = 8,
+                    MCAR_theta = [.9,.9,0],
+                   theta_in = [.5,.5,.5],
+                   theta_out = [.5,.5,.5])
+    env.current_state = (6,7,0) #next to terminal state
+    env.step((0,-1)) #step down to terminal state
+    env.step((0,0)) #this should now lead it to reset to starting state
+    try: 
+        assert env.current_state == (env.start_location[0], env.start_location[1], 0)
+        print("Terminal state reset passed")
+    except: 
+        raise("Terminal state reset FAILED")
 
-    """
-    d = 5
-    for a in list(lwe.action_descs.keys()):
-            
-        # try a test-case
-        gw = np.zeros((d,d))
-        gw_colors = lwe.make_gw_colors(gw)
-    
-        # initialize our state randomly
-        state = np.array([2, 2, 1])
-        gw[state[0], state[1]] = +100
-        
-        # get our new state
-        new_state = lwe.true_move(state, a, gw, gw_colors, p_wind_i = 0, p_wind_j = 0)
-        gw[int(new_state[0]), int(new_state[1])] = 50
-        
-        sns.heatmap(gw, cbar=False, cmap="viridis")
-        plt.title(lwe.action_descs[a])
-        plt.show()
+
     
 
 
@@ -692,7 +687,7 @@ def test_main_runRL():
 if __name__ == "__main__":
     print("--")
     test_lakeworld(print_action_plots = False, with_wind = False)
-    #test_actions() - produces visuals
+    test_terminal_state_step()
     print("--")
     test_imputers()
     print("--")
