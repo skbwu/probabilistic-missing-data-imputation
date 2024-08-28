@@ -5,8 +5,6 @@ import copy
 import os
 
 import ImputerTools as impt
-import RLTools as rlt
-
 
 
 
@@ -343,7 +341,7 @@ def run_RL(env, logger,
             logger.start_t_step(t_step)
     
         # Choose action A from S using policy-derived from Q, possibly e-greedy
-        action = rlt.get_action(last_imp_state = last_imp_state, 
+        action = get_action(last_imp_state = last_imp_state, 
                        last_imp_state_list = last_imp_state_list,
                        impute_method = impute_method,
                        action_list = action_list, 
@@ -363,7 +361,7 @@ def run_RL(env, logger,
             raise Exception(f"env does not have a missing method called {miss_mech}")
           
         # Impute for the new_pobs_state, if needed
-        new_imp_state, new_imp_state_list = rlt.get_imputation(impute_method = impute_method,
+        new_imp_state, new_imp_state_list = get_imputation(impute_method = impute_method,
                            new_pobs_state  = new_pobs_state, 
                            last_fobs_state = last_fobs_state,
                            last_obs_state_comp = last_obs_state_comp,
