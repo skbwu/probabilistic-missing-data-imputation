@@ -2,4 +2,6 @@
 .tar.gz
 .jupyter/
 __pycache__
+_avast_
+
 DevNotebooks
