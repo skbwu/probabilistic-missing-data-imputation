@@ -87,8 +87,10 @@ def select_action(state, action_list, Q, epsilon, option):
              (2) voting2 - get the Q-maximizing action for each state and then 
                  pick among them at random
                  
-            (3) TODO: voting3 - take softmax of action votes and then select
-                at random according to these probabilities
+             (3) voting3 - calculation number voting for each action and then take
+                softmax of these and randomly draw action using these. E.g.,
+                given two actions with counts 1, 3, draw the second with
+                probability exp(3)/(exp(1)+exp(3))
                  
             (4) averaging - for each action, calculate the mean Q function over
                 states and then take the action with maximum mean Q
@@ -113,16 +115,25 @@ def select_action(state, action_list, Q, epsilon, option):
         if "voting" in option:
             # get Q value for each action for each state 
             Qvals = [[Q[(s, a)] for a in action_list] for s in state]
-            # get where max Q values are for each state, breaking ties randomly
+            
+            # For each state, get indices for actions where max Q values are, breaking ties randomly
             maxes = [np.where(v == np.max(v))[0] for v  in Qvals]
             maxes = [v[np.random.choice(len(v))] for v in maxes] 
+            
             if option == "voting1":
                 counts = Counter(maxes)
                 max_count = counts.most_common(1)[0][1] #what is highest count?
                 max_indices = [elem for elem, count in counts.items() if count == max_count]
+                
             if option == "voting2": 
                 max_indices = maxes 
-          
+                
+            if option == "voting3":
+                counter = Counter(maxes)
+                counts = {num: count for num, count in counter.items()}
+                values = np.exp(np.array(list(counts.values()))) #exponentiate counts
+                max_indices = [np.random.choice(list(counts.keys()), p = values/sum(values))] #will already be a single index
+            
         if option == "averaging":    
             action_means = [np.mean([Q[(s,a)] for s in state]) for a in action_list]
             max_indices = np.where(action_means == np.max(action_means))[0]
