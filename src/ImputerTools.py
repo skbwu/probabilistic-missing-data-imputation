@@ -61,7 +61,7 @@ def init_Q(
 
 
 
-def select_action(state, action_list, Q, epsilon, option = "voting2"):
+def select_action(state, action_list, Q, epsilon, option):
     """
     Function select actions based on an epsilon greedy policy 
     (or greedy if psilon = 0), maximizing over the Q function formatted
@@ -87,7 +87,10 @@ def select_action(state, action_list, Q, epsilon, option = "voting2"):
              (2) voting2 - get the Q-maximizing action for each state and then 
                  pick among them at random
                  
-            (3) averaging - for each action, calculate the mean Q function over
+            (3) TODO: voting3 - take softmax of action votes and then select
+                at random according to these probabilities
+                 
+            (4) averaging - for each action, calculate the mean Q function over
                 states and then take the action with maximum mean Q
                  
 
@@ -97,13 +100,14 @@ def select_action(state, action_list, Q, epsilon, option = "voting2"):
     """
     assert epsilon >= 0
     
+    # Case where there is just one state
     if type(state) is tuple:
         # get Q value for each action for that state
         Qvals = [Q[(state, a)] for a in action_list]
         # get where the max Q values are
         max_indices = np.where(Qvals == np.max(Qvals))[0]
         
-        
+    # Case where there is a list of states and need to do some voting/averaging
     if type(state) is list:
         
         if "voting" in option:
